@@ -103,7 +103,7 @@ const initialState = {
   mediapipeDelegate: "GPU" as MediaPipeDelegate,
   minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5,
-  numHands: 1,
+  numHands: 2,
   modelAssetUrl: HAND_LANDMARKER_MODEL_URL,
 
   // Database defaults

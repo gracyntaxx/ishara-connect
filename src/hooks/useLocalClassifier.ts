@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { classifyLandmarks } from "@/lib/classifier/rules";
+import { classifyLandmarks, classifyMultiLandmarks } from "@/lib/classifier/rules";
 import { TemporalSmoother } from "@/lib/classifier/smoothing";
 import type { Landmark } from "@/lib/classifier/landmarks";
 import {
@@ -12,27 +12,29 @@ import {
 } from "@/lib/constants";
 
 interface UseLocalClassifierOptions {
-  landmarks: Landmark[] | null;
+  landmarks?: Landmark[] | null;
+  multiLandmarks?: Landmark[][] | null;
   confidenceThreshold?: number;
   smoothingWindow?: number;
   minVotes?: number;
   emitCooldownMs?: number;
+  enabled?: boolean;
   onSignDetected?: (sign: SignLabel, confidence: number) => void;
 }
 
 /**
  * Turns a stream of hand landmarks into a stable sign prediction:
- * classify → confidence gate → temporal smoothing → cooldown → emit.
- *
- * Provides imperative start/stop so the consumer controls when
- * classification is active.
+ * Supports single hand and dual-hand MediaPipe landmarks.
+ * Automatically active when `enabled: true` (or via start/stop).
  */
 export function useLocalClassifier({
   landmarks,
-  confidenceThreshold = CONFIDENCE_THRESHOLD,
+  multiLandmarks,
+  confidenceThreshold = 0.50,
   smoothingWindow = SMOOTHING_WINDOW,
   minVotes = SMOOTHING_MIN_VOTES,
   emitCooldownMs = SIGN_EMIT_COOLDOWN_MS,
+  enabled = true,
   onSignDetected,
 }: UseLocalClassifierOptions) {
   const smoother = useMemo(
@@ -43,12 +45,24 @@ export function useLocalClassifier({
   const [prediction, setPrediction] = useState<SignLabel | null>(null);
   const [confidence, setConfidence] = useState(0);
   const [isLowConfidence, setIsLowConfidence] = useState(false);
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(Boolean(enabled));
 
-  const activeRef = useRef(false);
+  const activeRef = useRef(Boolean(enabled));
   const lastEmitRef = useRef<{ sign: string; time: number }>({ sign: "", time: 0 });
   const callbackRef = useRef(onSignDetected);
   const idleFrames = useRef(0);
+
+  // Sync active state with enabled prop
+  useEffect(() => {
+    activeRef.current = Boolean(enabled);
+    setIsActive(Boolean(enabled));
+    if (!enabled) {
+      smoother.reset();
+      setPrediction(null);
+      setConfidence(0);
+      setIsLowConfidence(false);
+    }
+  }, [enabled, smoother]);
 
   useEffect(() => {
     callbackRef.current = onSignDetected;
@@ -71,14 +85,27 @@ export function useLocalClassifier({
   useEffect(() => {
     if (!activeRef.current) return;
 
-    if (!landmarks) {
+    // Check if any hands are present
+    const hasMulti = multiLandmarks && multiLandmarks.length > 0;
+    const hasSingle = Boolean(landmarks && landmarks.length > 0);
+
+    if (!hasMulti && !hasSingle) {
       idleFrames.current += 1;
-      if (idleFrames.current > 12) smoother.reset();
+      if (idleFrames.current > 12) {
+        smoother.reset();
+        setPrediction(null);
+        setConfidence(0);
+      }
       return;
     }
 
     idleFrames.current = 0;
-    const raw = classifyLandmarks(landmarks);
+
+    // Classify using dual-hand engine if available, or fallback to single
+    const raw = hasMulti
+      ? classifyMultiLandmarks(multiLandmarks!)
+      : classifyLandmarks(landmarks!);
+
     if (!raw) return;
 
     const accepted = raw.confidence >= confidenceThreshold ? raw : null;
@@ -97,7 +124,7 @@ export function useLocalClassifier({
         callbackRef.current(smoothed.label, smoothed.confidence);
       }
     }
-  }, [landmarks, confidenceThreshold, emitCooldownMs, smoother]);
+  }, [landmarks, multiLandmarks, confidenceThreshold, emitCooldownMs, smoother]);
 
   return { prediction, confidence, isLowConfidence, isActive, start, stop };
 }

@@ -9,64 +9,10 @@ export type LandmarkerStatus = "idle" | "loading" | "ready" | "error";
 interface UseMediaPipeOptions {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   targetFps?: number;
+  numHands?: number;
 }
 
-/**
- * Runs the MediaPipe Hand Landmarker over a <video> element.
- * Uses configurable options (model URL, GPU/CPU delegate, confidence thresholds, numHands)
- * from useSettingsStore. All recognition runs client-side.
- */
-export function useMediaPipe({ videoRef, targetFps }: UseMediaPipeOptions) {
-  const {
-    mediapipeDelegate,
-    minDetectionConfidence,
-    minTrackingConfidence,
-    numHands,
-    modelAssetUrl,
-    targetFps: storeFps,
-  } = useSettingsStore();
-
-  const [status, setStatus] = useState<LandmarkerStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [landmarks, setLandmarks] = useState<Landmark[] | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-
-  const landmarksRef = useRef<Landmark[] | null>(null);
-  const activeRef = useRef(false);
-  const rafRef = useRef(0);
-  const landmarkerRef = useRef<{
-    detectForVideo: (v: HTMLVideoElement, t: number) => { landmarks: Landmark[][] };
-    close: () => void;
-  } | null>(null);
-  const initPromiseRef = useRef<Promise<void> | null>(null);
-
-  const effectiveFps = targetFps ?? storeFps ?? TARGET_FPS;
-  const frameInterval = 1000 / effectiveFps;
-
-  const loop = useCallback(() => {
-    if (!activeRef.current) return;
-    rafRef.current = requestAnimationFrame(loop);
-
-    const video = videoRef.current;
-    const landmarker = landmarkerRef.current;
-    if (!landmarker || !video || video.readyState < 2) return;
-
-    const now = performance.now();
-    // throttle based on configured targetFps
-    if ((loop as any).__lastFrame && now - (loop as any).__lastFrame < frameInterval) return;
-    (loop as any).__lastFrame = now;
-
-    try {
-      const result = landmarker.detectForVideo(video, now);
-      const hand = result.landmarks?.[0] ?? null;
-      const changed = Boolean(hand) !== Boolean(landmarksRef.current);
-      landmarksRef.current = hand;
-      if (hand || changed) setLandmarks(hand);
-    } catch {
-      /* transient decode errors are safe to skip */
-    }
-  }, [videoRef, frameInterval]);
-
+// Module-scoped singletons to ensure fast start (<50ms)
 let sharedFilesetPromise: Promise<any> | null = null;
 let sharedLandmarker: any = null;
 let sharedLandmarkerPromise: Promise<any> | null = null;
@@ -91,7 +37,7 @@ async function getSharedLandmarker(options: {
         modelAssetPath: options.modelAssetUrl || HAND_LANDMARKER_MODEL_URL,
         delegate: (options.mediapipeDelegate as any) || "GPU",
       },
-      numHands: options.numHands || 1,
+      numHands: Math.max(options.numHands || 2, 2), // Track both hands simultaneously
       minHandDetectionConfidence: options.minConfidence ?? 0.5,
       minHandPresenceConfidence: options.minConfidence ?? 0.5,
       minTrackingConfidence: options.minConfidence ?? 0.5,
@@ -104,7 +50,70 @@ async function getSharedLandmarker(options: {
   return sharedLandmarkerPromise;
 }
 
-// Lazy-initialise the landmarker using configured MediaPipe options
+/**
+ * Runs the MediaPipe Hand Landmarker over a <video> element.
+ * Supports dual-hand tracking (multiLandmarks: Landmark[][]) and single-hand (landmarks: Landmark[]).
+ */
+export function useMediaPipe({ videoRef, targetFps, numHands: customNumHands }: UseMediaPipeOptions) {
+  const {
+    mediapipeDelegate,
+    minDetectionConfidence,
+    numHands: storeNumHands,
+    modelAssetUrl,
+    targetFps: storeFps,
+  } = useSettingsStore();
+
+  const effectiveNumHands = Math.max(customNumHands ?? storeNumHands ?? 2, 2);
+
+  const [status, setStatus] = useState<LandmarkerStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [landmarks, setLandmarks] = useState<Landmark[] | null>(null);
+  const [multiLandmarks, setMultiLandmarks] = useState<Landmark[][]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+
+  const landmarksRef = useRef<Landmark[] | null>(null);
+  const multiLandmarksRef = useRef<Landmark[][]>([]);
+  const activeRef = useRef(false);
+  const rafRef = useRef(0);
+  const landmarkerRef = useRef<{
+    detectForVideo: (v: HTMLVideoElement, t: number) => { landmarks: Landmark[][] };
+    close: () => void;
+  } | null>(null);
+
+  const effectiveFps = targetFps ?? storeFps ?? TARGET_FPS;
+  const frameInterval = 1000 / effectiveFps;
+
+  const loop = useCallback(() => {
+    if (!activeRef.current) return;
+    rafRef.current = requestAnimationFrame(loop);
+
+    const video = videoRef.current;
+    const landmarker = landmarkerRef.current;
+    if (!landmarker || !video || video.readyState < 2) return;
+
+    const now = performance.now();
+    // throttle based on configured targetFps
+    if ((loop as any).__lastFrame && now - (loop as any).__lastFrame < frameInterval) return;
+    (loop as any).__lastFrame = now;
+
+    try {
+      const result = landmarker.detectForVideo(video, now);
+      const allHands = result.landmarks || [];
+      const primaryHand = allHands[0] ?? null;
+
+      const singleChanged = Boolean(primaryHand) !== Boolean(landmarksRef.current);
+      landmarksRef.current = primaryHand;
+      multiLandmarksRef.current = allHands;
+
+      if (primaryHand || singleChanged) {
+        setLandmarks(primaryHand);
+      }
+      setMultiLandmarks(allHands);
+    } catch {
+      /* transient decode errors are safe to skip */
+    }
+  }, [videoRef, frameInterval]);
+
   const init = useCallback(async () => {
     if (landmarkerRef.current) return;
     setStatus("loading");
@@ -113,7 +122,7 @@ async function getSharedLandmarker(options: {
       const instance = await getSharedLandmarker({
         modelAssetUrl,
         mediapipeDelegate,
-        numHands,
+        numHands: effectiveNumHands,
         minConfidence: minDetectionConfidence ?? 0.5,
       });
       landmarkerRef.current = instance;
@@ -122,7 +131,7 @@ async function getSharedLandmarker(options: {
       setStatus("error");
       setError(err?.message || "Hand tracking couldn't start. Check your connection and reload.");
     }
-  }, [mediapipeDelegate, minDetectionConfidence, numHands, modelAssetUrl]);
+  }, [mediapipeDelegate, minDetectionConfidence, effectiveNumHands, modelAssetUrl]);
 
   const start = useCallback(() => {
     if (activeRef.current) return;
@@ -142,10 +151,12 @@ async function getSharedLandmarker(options: {
     setIsRunning(false);
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     landmarksRef.current = null;
+    multiLandmarksRef.current = [];
     setLandmarks(null);
+    setMultiLandmarks([]);
   }, []);
 
-  // Cleanup on unmount (keep shared landmarker hot in memory)
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       activeRef.current = false;
@@ -157,6 +168,7 @@ async function getSharedLandmarker(options: {
     status,
     error,
     landmarks,
+    multiLandmarks,
     isRunning,
     start,
     stop,

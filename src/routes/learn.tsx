@@ -27,7 +27,7 @@ import { SUPPORTED_SIGNS, SIGN_HINTS, SignLabel } from "../lib/constants";
 import { useMediaStream } from "../hooks/useMediaStream";
 import { useMediaPipe } from "../hooks/useMediaPipe";
 import { useLocalClassifier } from "../hooks/useLocalClassifier";
-import { drawLandmarks } from "../lib/classifier/landmarks";
+import { drawLandmarks, drawMultiHandLandmarks } from "../lib/classifier/landmarks";
 import {
   syncProgressToSupabase,
   unlockSupabaseBadge,
@@ -290,8 +290,9 @@ function LearnPage() {
     }
   }, [stream, stage]);
 
-  const { landmarks, isRunning, start: startMediaPipe, stop: stopMediaPipe } = useMediaPipe({
+  const { landmarks, multiLandmarks, isRunning, start: startMediaPipe, stop: stopMediaPipe } = useMediaPipe({
     videoRef,
+    numHands: 2,
   });
 
   // Start / stop camera and AI on entering test stage
@@ -307,9 +308,9 @@ function LearnPage() {
     }
   }, [stage, startStream, stopStream, startMediaPipe, stopMediaPipe]);
 
-  // Landmark canvas drawing (blue glowing skeleton)
+  // Landmark canvas drawing (blue glowing skeleton with coordinates)
   useEffect(() => {
-    if (!canvasRef.current || !landmarks || stage !== "test" || !showWireframe) {
+    if (!canvasRef.current || stage !== "test" || !showWireframe) {
       if (canvasRef.current) {
         const ctx = canvasRef.current.getContext("2d");
         ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -322,13 +323,14 @@ function LearnPage() {
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawLandmarks(ctx, landmarks, {
-      color: "#38bdf8",
-      connectionColor: "rgba(14, 165, 233, 0.7)",
-      radius: 4,
-      lineWidth: 2.5,
-    });
-  }, [landmarks, stage, showWireframe]);
+    if (multiLandmarks && multiLandmarks.length > 0) {
+      drawMultiHandLandmarks(ctx, multiLandmarks, {
+        showCoordinates: true,
+        radius: 4,
+        lineWidth: 2.5,
+      });
+    }
+  }, [multiLandmarks, stage, showWireframe]);
 
   // Handle successful mastery of a level
   const handleLevelMastered = useCallback(
@@ -374,11 +376,11 @@ function LearnPage() {
     (detectedSign: SignLabel, confidence: number) => {
       if (stage !== "test" || !selectedLevel) return;
 
-      if (detectedSign === selectedLevel.sign && confidence >= 0.55) {
+      if (detectedSign === selectedLevel.sign && confidence >= 0.50) {
         setMatchScore(confidence);
         setFeedbackTip("Perfect posture! Hold steady to pass...");
         setHoldProgress((prev) => {
-          const next = prev + 20; // Reaches 100% in ~1.2 seconds of holding
+          const next = prev + 25; // Reaches 100% in ~1 second of steady holding
           if (next >= 100) {
             handleLevelMastered(selectedLevel, confidence);
             return 100;
@@ -396,8 +398,10 @@ function LearnPage() {
 
   useLocalClassifier({
     landmarks,
+    multiLandmarks,
     onSignDetected: handleSignDetected,
     enabled: stage === "test",
+    confidenceThreshold: 0.50,
   });
 
   const openLevel = (levelItem: LevelItem) => {

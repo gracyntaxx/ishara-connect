@@ -20,7 +20,7 @@ interface DialogueState {
   autoScroll: boolean;
   maxMessages: number;
 
-  addMessage: (message: Omit<DialogueMessage, "id">) => void;
+  addMessage: (message: Omit<DialogueMessage, "id"> & { id?: string }) => void;
   updateMessage: (id: string, updates: Partial<DialogueMessage>) => void;
   removeMessage: (id: string) => void;
   clearMessages: () => void;
@@ -45,12 +45,22 @@ export const useDialogueStore = create<DialogueState>()(
       ...initialState,
 
       addMessage: (message) =>
-        set((state) => ({
-          messages: [
-            ...state.messages,
-            { ...message, id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}` },
-          ].slice(-state.maxMessages),
-        })),
+        set((state) => {
+          const id = message.id || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+          // Deduplicate: ignore if same id or same sender + text within 2000ms
+          const isDuplicate = state.messages.some(
+            (m) =>
+              m.id === id ||
+              (m.senderId === message.senderId &&
+                m.text === message.text &&
+                Math.abs((m.timestamp || 0) - (message.timestamp || 0)) < 2000),
+          );
+          if (isDuplicate) return state;
+
+          return {
+            messages: [...state.messages, { ...message, id }].slice(-state.maxMessages),
+          };
+        }),
       updateMessage: (id, updates) =>
         set((state) => ({
           messages: state.messages.map((m) => (m.id === id ? { ...m, ...updates } : m)),

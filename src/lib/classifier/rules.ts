@@ -80,6 +80,60 @@ export function classifyLandmarks(landmarks: readonly Landmark[]): Prediction | 
   return classifyFeatures(features);
 }
 
+export function classifyMultiLandmarks(
+  multiLandmarks: readonly (readonly Landmark[])[],
+): Prediction | null {
+  if (!multiLandmarks || multiLandmarks.length === 0) return null;
+
+  if (multiLandmarks.length === 1) {
+    return classifyLandmarks(multiLandmarks[0] ?? []);
+  }
+
+  // Two hands detected
+  const hand1 = multiLandmarks[0];
+  const hand2 = multiLandmarks[1];
+
+  const feat1 = hand1 ? extractFeatures(hand1) : null;
+  const feat2 = hand2 ? extractFeatures(hand2) : null;
+
+  const pred1 = feat1 ? classifyFeatures(feat1) : null;
+  const pred2 = feat2 ? classifyFeatures(feat2) : null;
+
+  // Check compound two-handed ASL signs:
+  if (feat1 && feat2) {
+    // ASL 'Help': One hand thumbs-up, second hand flat supporting base
+    const h1ThumbsUp = feat1.extension[0] > 0.6 && feat1.extension[1] < 0.4 && feat1.extension[2] < 0.4;
+    const h2Flat = feat2.extension[1] > 0.5 && feat2.extension[2] > 0.5 && feat2.extension[3] > 0.5;
+    const h2ThumbsUp = feat2.extension[0] > 0.6 && feat2.extension[1] < 0.4 && feat2.extension[2] < 0.4;
+    const h1Flat = feat1.extension[1] > 0.5 && feat1.extension[2] > 0.5 && feat1.extension[3] > 0.5;
+
+    if ((h1ThumbsUp && h2Flat) || (h2ThumbsUp && h1Flat)) {
+      return { label: "Help", confidence: 0.94 };
+    }
+
+    // Both hands open palm: emphatic 'Hello'
+    const bothOpen =
+      feat1.extension.every((e) => e > 0.55) && feat2.extension.every((e) => e > 0.55);
+    if (bothOpen) {
+      return { label: "Hello", confidence: 0.95 };
+    }
+
+    // Both hands flat together: 'Thank You' or 'Please'
+    const bothFlat =
+      feat1.extension.slice(1).every((e) => e > 0.6) &&
+      feat2.extension.slice(1).every((e) => e > 0.6);
+    if (bothFlat) {
+      return { label: "Thank You", confidence: 0.92 };
+    }
+  }
+
+  // Whichever hand signs with highest confidence
+  if (pred1 && pred2) {
+    return pred1.confidence >= pred2.confidence ? pred1 : pred2;
+  }
+  return pred1 || pred2 || null;
+}
+
 export function classifyFeatures(features: HandFeatures): Prediction | null {
   let best: Prediction | null = null;
   for (const rule of ACTIVE_RULES) {
@@ -90,3 +144,4 @@ export function classifyFeatures(features: HandFeatures): Prediction | null {
   }
   return best;
 }
+
