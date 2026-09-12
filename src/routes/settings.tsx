@@ -16,10 +16,7 @@ import {
   Key,
   Eye,
   EyeOff,
-  AlertTriangle,
-  Copy,
 } from "lucide-react";
-import { supabase } from "../lib/supabase";
 import { HAND_LANDMARKER_MODEL_URL } from "../lib/constants";
 
 export const Route = createFileRoute("/settings")({
@@ -42,8 +39,6 @@ function Settings() {
     geminiApiKey,
     showConfidenceScores,
     showHandLandmarks,
-    signEmitCooldownMs,
-    targetFps,
     setTheme,
     setHighContrast,
     setReducedMotion,
@@ -58,12 +53,9 @@ function Settings() {
     setGeminiApiKey,
     setShowConfidenceScores,
     setShowHandLandmarks,
-    setSignEmitCooldownMs,
-    setTargetFps,
   } = useSettingsStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
-  const [showAnonKey, setShowAnonKey] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
 
   useEffect(() => {
@@ -480,184 +472,10 @@ function Settings() {
                 </div>
               </div>
             </section>
-
-            <section className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Advanced
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="cooldown"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Sign Emit Cooldown (ms)
-                  </label>
-                  <input
-                    id="cooldown"
-                    type="number"
-                    value={signEmitCooldownMs}
-                    onChange={(e) => setSignEmitCooldownMs(Number(e.target.value))}
-                    min="500"
-                    max="5000"
-                    step="100"
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Minimum time between duplicate sign emissions
-                  </p>
-                </div>
-                <div>
-                  <label htmlFor="fps" className="block text-sm font-medium text-foreground mb-2">
-                    Target FPS
-                  </label>
-                  <input
-                    id="fps"
-                    type="number"
-                    value={targetFps}
-                    onChange={(e) => setTargetFps(Number(e.target.value))}
-                    min="10"
-                    max="30"
-                    step="1"
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Detection loop frame rate (higher = more responsive, more CPU)
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5" />
-                Supabase Connection
-              </h2>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Configure your Supabase project for cloud sync of practice progress and settings.
-                </p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label
-                      htmlFor="supabaseUrl"
-                      className="block text-sm font-medium text-foreground mb-2"
-                    >
-                      Project URL
-                    </label>
-                    <input
-                      id="supabaseUrl"
-                      type="text"
-                      value={import.meta.env.VITE_SUPABASE_URL || ""}
-                      readOnly
-                      className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                      placeholder="https://your-project.supabase.co"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Set via VITE_SUPABASE_URL env var
-                    </p>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="supabaseKey"
-                      className="block text-sm font-medium text-foreground mb-2"
-                    >
-                      Anon Key
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="supabaseKey"
-                        type={showAnonKey ? "text" : "password"}
-                        value={import.meta.env.VITE_SUPABASE_ANON_KEY || ""}
-                        readOnly
-                        className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowAnonKey(!showAnonKey)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showAnonKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Set via VITE_SUPABASE_ANON_KEY env var
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {supabase && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          if (!supabase) return;
-                          const { error } = await supabase
-                            .from("users")
-                            .select("count")
-                            .limit(1);
-                          alert(error ? `Failed: ${error.message}` : "Connected to Supabase!");
-                        } catch {
-                          alert("Failed to connect");
-                        }
-                      }}
-                      className="px-4 py-2 border border-input bg-background text-foreground rounded-lg text-sm font-medium hover:bg-accent transition-colors flex items-center"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Test Connection
-                    </button>
-                  )}
-                  <button
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(
-                        `-- Run in Supabase SQL Editor\n-- Get schema from: supabase-schema.sql`,
-                      );
-                      alert("Copy the SQL from supabase-schema.sql file in project root");
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 border border-input bg-background text-foreground rounded-lg text-sm font-medium hover:bg-accent transition-colors"
-                  >
-                    <Copy className="h-4 w-4" />
-                    View Schema SQL
-                  </button>
-                </div>
-              </div>
-            </section>
           </div>
         </div>
       </main>
       <Footer />
     </div>
-  );
-}
-
-function ShieldCheck({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-1.343 3-3s-1.343-3-3-3"
-      />
-    </svg>
-  );
-}
-
-function RefreshCw({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-      />
-    </svg>
   );
 }

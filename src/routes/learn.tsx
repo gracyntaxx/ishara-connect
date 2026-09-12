@@ -15,11 +15,15 @@ import {
   RotateCcw,
   Trophy,
   Play,
+  Loader2,
+  Zap,
 } from "lucide-react";
 import { useMediaStream } from "../hooks/useMediaStream";
 import { useMediaPipe } from "../hooks/useMediaPipe";
 import { useLocalClassifier } from "../hooks/useLocalClassifier";
-import { drawMultiHandLandmarks } from "../lib/classifier/landmarks";
+import { drawMultiHandLandmarks, extractFeatures } from "../lib/classifier/landmarks";
+import { classifyWithGemini, isGeminiConfigured } from "../lib/gemini/fallback";
+import { useSettingsStore } from "../stores/useSettingsStore";
 import type { SignLabel } from "../lib/constants";
 import { useAuthStore } from "../stores";
 
@@ -142,17 +146,20 @@ function LearnPage() {
     setDetectedSign(null);
   };
 
-  const handleStartTest = () => setStage("test");
+  const handleStartTest = () => {
+    setStage("test");
+    setTestResult(null);
+    setDetectedSign(null);
+  };
 
-  const handleTestResult = useCallback((sign: SignLabel | string, confidence: number) => {
-    if (!selected || confidence < 0.55) return;
+  const handleSuccess = useCallback((sign: string) => {
+    if (!selected) return;
     setDetectedSign(sign);
-    const isCorrect = sign === selected.sign;
-    setTestResult(isCorrect ? "correct" : "incorrect");
-    if (isCorrect) {
-      setMasteredIds((prev) => new Set([...prev, selected.id]));
-      setTimeout(() => setStage("result"), 800);
-    }
+    setTestResult("correct");
+    setMasteredIds((prev) => new Set([...prev, selected.id]));
+    setTimeout(() => {
+      setStage("result");
+    }, 1000);
   }, [selected]);
 
   const handleNext = () => {
@@ -169,6 +176,7 @@ function LearnPage() {
     if (stage === "test" || stage === "learn") {
       setStage(stage === "test" ? "learn" : "pick");
       setTestResult(null);
+      setDetectedSign(null);
     } else {
       setStage("pick");
     }
@@ -194,9 +202,8 @@ function LearnPage() {
               lesson={selected}
               testResult={testResult}
               detectedSign={detectedSign}
-              onSignDetected={handleTestResult}
+              onSuccess={handleSuccess}
               onBack={handleBack}
-              onRetry={() => { setTestResult(null); setDetectedSign(null); }}
             />
           )}
           {stage === "result" && selected && (
@@ -405,22 +412,26 @@ function TestStage({
   lesson,
   testResult,
   detectedSign,
-  onSignDetected,
+  onSuccess,
   onBack,
-  onRetry,
 }: {
   lesson: Lesson;
   testResult: "correct" | "incorrect" | null;
   detectedSign: string | null;
-  onSignDetected: (sign: SignLabel, confidence: number) => void;
+  onSuccess: (sign: string) => void;
   onBack: () => void;
-  onRetry: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [camStarted, setCamStarted] = useState(false);
+  const [camStarted, setCamStarted] = useState(true);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+  const [isAnalyzingAi, setIsAnalyzingAi] = useState(false);
 
-  const { stream } = useMediaStream({ video: camStarted, audio: false });
+  const { geminiApiKey } = useSettingsStore();
+  const hasGemini = isGeminiConfigured(geminiApiKey);
+
+  const { stream, error: streamError } = useMediaStream({ video: camStarted, audio: false });
 
   // Attach camera stream to video
   useEffect(() => {
@@ -435,21 +446,38 @@ function TestStage({
     numHands: 2,
   });
 
+  // Start tracking as soon as camera stream is ready
+  useEffect(() => {
+    if (stream && !isRunning) {
+      start();
+    }
+  }, [stream, isRunning, start]);
+
   // Draw skeleton on canvas
   useEffect(() => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
+
+    if (videoRef.current && videoRef.current.videoWidth > 0) {
+      if (
+        canvasRef.current.width !== videoRef.current.videoWidth ||
+        canvasRef.current.height !== videoRef.current.videoHeight
+      ) {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
+      }
+    }
+
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     if (multiLandmarks && multiLandmarks.length > 0) {
-      drawMultiHandLandmarks(ctx, multiLandmarks, { showCoordinates: true, radius: 4, lineWidth: 2.5 });
+      drawMultiHandLandmarks(ctx, multiLandmarks, {
+        showCoordinates: true,
+        radius: 4,
+        lineWidth: 2.5,
+      });
     }
   }, [multiLandmarks]);
-
-  const handleStart = () => {
-    setCamStarted(true);
-    start();
-  };
 
   const handleStop = () => {
     stop();
@@ -457,47 +485,152 @@ function TestStage({
     if (stream) stream.getTracks().forEach((t) => t.stop());
   };
 
+  const handleStart = () => {
+    setCamStarted(true);
+  };
+
   useEffect(() => () => { handleStop(); }, []);
 
-  useLocalClassifier({
+  const {
+    prediction,
+    confidence,
+    isLowConfidence,
+    isAiResolving,
+  } = useLocalClassifier({
     landmarks,
     multiLandmarks,
-    enabled: isRunning && !testResult,
-    confidenceThreshold: 0.52,
-    onSignDetected,
+    enabled: isRunning && testResult !== "correct",
+    confidenceThreshold: 0.44,
+    targetSign: lesson.sign,
   });
+
+  // Check if current prediction matches target lesson sign
+  const isTargetMatch = Boolean(
+    prediction &&
+      prediction.toLowerCase().trim() === lesson.sign.toLowerCase().trim() &&
+      confidence >= 0.46
+  );
+
+  // Hold-to-verify timer
+  useEffect(() => {
+    if (testResult === "correct") return;
+
+    let timer: any;
+    if (isTargetMatch) {
+      timer = setInterval(() => {
+        setHoldProgress((prev) => {
+          const next = prev + 25;
+          if (next >= 100) {
+            clearInterval(timer);
+            onSuccess(lesson.sign);
+            return 100;
+          }
+          return next;
+        });
+      }, 120);
+    } else {
+      setHoldProgress(0);
+    }
+
+    return () => clearInterval(timer);
+  }, [isTargetMatch, testResult, lesson.sign, onSuccess]);
+
+  // Direct AI Analysis
+  const handleAnalyzeWithAi = async () => {
+    if (isAnalyzingAi) return;
+    setIsAnalyzingAi(true);
+    setAiFeedback("Analyzing hand sign with AI...");
+
+    try {
+      let imageDataUrl: string | null = null;
+      if (videoRef.current && videoRef.current.videoWidth > 0) {
+        const offscreen = document.createElement("canvas");
+        offscreen.width = 320;
+        offscreen.height = 240;
+        const offCtx = offscreen.getContext("2d");
+        if (offCtx) {
+          offCtx.drawImage(videoRef.current, 0, 0, 320, 240);
+          imageDataUrl = offscreen.toDataURL("image/jpeg", 0.75);
+        }
+      }
+
+      const primaryHand = (multiLandmarks && multiLandmarks[0]) || landmarks || null;
+      const feat = primaryHand ? extractFeatures(primaryHand) : null;
+
+      const aiResult = await classifyWithGemini({
+        features: feat,
+        imageDataUrl,
+        targetSign: lesson.sign,
+        apiKey: geminiApiKey,
+      });
+
+      if (aiResult) {
+        const matchesTarget =
+          aiResult.label.toLowerCase().trim() === lesson.sign.toLowerCase().trim() ||
+          aiResult.isTarget;
+
+        if (matchesTarget && aiResult.confidence >= 0.5) {
+          setAiFeedback(`AI confirmed "${aiResult.label}" (${Math.round(aiResult.confidence * 100)}%)! Excellent job!`);
+          setHoldProgress(100);
+          setTimeout(() => {
+            onSuccess(lesson.sign);
+          }, 600);
+        } else {
+          setAiFeedback(
+            `AI detected: ${aiResult.label} (${Math.round(aiResult.confidence * 100)}%). ${aiResult.explanation || `Try to ${lesson.howTo[0]}`}`
+          );
+        }
+      } else {
+        setAiFeedback("Could not determine sign clearly. Please ensure your hand is well-lit and centered.");
+      }
+    } catch {
+      setAiFeedback("AI check failed. Please check your connection.");
+    } finally {
+      setIsAnalyzingAi(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-[#5f6368] hover:text-[#202124] mb-6 transition-colors">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-sm text-[#5f6368] hover:text-[#202124] mb-6 transition-colors font-medium"
+      >
         <ArrowLeft className="w-4 h-4" /> Back to lesson
       </button>
 
       <div className="bg-white rounded-2xl border border-[#e8eaed] shadow-sm overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-[#f1f3f4] flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#e8f0fe] flex items-center justify-center text-xl">
-            {lesson.emoji}
-          </div>
-          <div>
-            <h2 className="font-semibold text-[#202124]">Test: {lesson.sign}</h2>
-            <p className="text-xs text-[#5f6368]">Show the gesture to your camera</p>
-          </div>
-          {testResult === "correct" && (
-            <div className="ml-auto flex items-center gap-1.5 text-[#34a853] font-semibold text-sm">
-              <CheckCircle2 className="w-5 h-5" /> Correct!
+        <div className="px-6 py-4 border-b border-[#f1f3f4] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#e8f0fe] flex items-center justify-center text-xl">
+              {lesson.emoji}
             </div>
-          )}
-          {testResult === "incorrect" && detectedSign && (
-            <div className="ml-auto text-xs text-[#ea4335] font-medium">
-              Detected: {detectedSign}, try again
+            <div>
+              <h2 className="font-bold text-[#202124] text-base sm:text-lg">Test: {lesson.sign}</h2>
+              <p className="text-xs text-[#5f6368]">Show the gesture to your camera</p>
             </div>
-          )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#f1f3f4] text-[#3c4043] border border-[#dadce0]">
+              <Sparkles className="w-3.5 h-3.5 text-[#1a73e8]" />
+              AI Recognition
+            </span>
+            {testResult === "correct" && (
+              <div className="flex items-center gap-1.5 text-[#34a853] font-bold text-sm bg-[#e6f4ea] px-3 py-1 rounded-full border border-[#ceead6]">
+                <CheckCircle2 className="w-4 h-4" /> Correct!
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Camera area — compact, not fullscreen */}
+        {/* Camera area */}
         <div className="p-5">
-          <div className="relative rounded-xl overflow-hidden bg-[#202124] mx-auto" style={{ maxWidth: 480, aspectRatio: "4/3" }}>
+          <div
+            className="relative rounded-2xl overflow-hidden bg-[#202124] mx-auto shadow-inner"
+            style={{ maxWidth: 520, aspectRatio: "4/3" }}
+          >
             <video
               ref={videoRef}
               playsInline
@@ -506,66 +639,172 @@ function TestStage({
             />
             <canvas
               ref={canvasRef}
-              width={480}
-              height={360}
+              width={520}
+              height={390}
               className="absolute inset-0 w-full h-full -scale-x-100 pointer-events-none"
             />
 
             {/* Overlay when not started */}
             {!camStarted && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#202124]">
-                <Camera className="w-12 h-12 text-[#5f6368] mb-3" />
-                <p className="text-sm text-[#9aa0a6]">Camera not started</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#202124] text-white p-4 text-center">
+                <Camera className="w-12 h-12 text-[#9aa0a6] mb-3" />
+                <p className="text-base font-semibold mb-1">Camera is off</p>
+                <p className="text-xs text-[#9aa0a6] max-w-xs mb-4">
+                  Click start to activate hand tracking and test your sign
+                </p>
+                <button
+                  onClick={handleStart}
+                  className="px-5 py-2.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-semibold rounded-xl text-sm transition-colors"
+                >
+                  Start Camera
+                </button>
               </div>
             )}
 
-            {/* Status badge */}
+            {/* Live Detection Badge (Top Left) */}
             {camStarted && (
-              <div className="absolute top-2 left-2">
-                <span className={`px-2 py-1 rounded-md text-[11px] font-semibold ${
-                  testResult === "correct"
-                    ? "bg-[#34a853] text-white"
-                    : testResult === "incorrect"
-                    ? "bg-[#ea4335] text-white"
-                    : "bg-black/70 text-[#9aa0a6]"
-                }`}>
-                  {testResult === "correct" ? "✓ Correct!" : testResult === "incorrect" ? `Saw: ${detectedSign}` : "Waiting for gesture..."}
+              <div className="absolute top-3 left-3 flex flex-col gap-1.5 pointer-events-none">
+                <div
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold shadow-md backdrop-blur-md transition-all ${
+                    isTargetMatch
+                      ? "bg-[#34a853]/90 text-white ring-2 ring-white/50 animate-pulse"
+                      : prediction
+                      ? "bg-[#202124]/85 text-white border border-white/20"
+                      : "bg-[#202124]/75 text-[#dadce0] border border-white/10"
+                  }`}
+                >
+                  {isTargetMatch ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{lesson.sign} Detected! ({Math.round(confidence * 100)}%)</span>
+                    </>
+                  ) : prediction ? (
+                    <>
+                      <Hand className="w-3.5 h-3.5 text-[#f9ab00]" />
+                      <span>Seeing: {prediction} ({Math.round(confidence * 100)}%)</span>
+                    </>
+                  ) : isAiResolving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#8ab4f8]" />
+                      <span>AI resolving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-3.5 h-3.5 text-[#9aa0a6]" />
+                      <span>Waiting for hand...</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Top Right: AI Status */}
+            {camStarted && (
+              <div className="absolute top-3 right-3 pointer-events-none">
+                <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#202124]/80 text-[#8ab4f8] border border-[#8ab4f8]/30 backdrop-blur-sm flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  {hasGemini ? "AI Ready" : "MediaPipe Vision"}
                 </span>
+              </div>
+            )}
+
+            {/* Hold Progress Bar overlay at bottom of video */}
+            {camStarted && isTargetMatch && (
+              <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-3 flex flex-col gap-1.5">
+                <div className="flex justify-between text-xs font-semibold text-white">
+                  <span>Hold steady to verify...</span>
+                  <span>{holdProgress}%</span>
+                </div>
+                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#34a853] transition-all duration-100 ease-linear rounded-full"
+                    style={{ width: `${holdProgress}%` }}
+                  />
+                </div>
               </div>
             )}
           </div>
 
-          {/* Controls */}
-          <div className="mt-4 flex flex-col sm:flex-row gap-2">
-            {!camStarted ? (
+          {/* Real-time Guidance Feedback Box */}
+          <div className="mt-4 p-4 rounded-xl border transition-colors bg-[#f8f9fa] border-[#e8eaed]">
+            {isTargetMatch ? (
+              <div className="flex items-center gap-3 text-[#137333]">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-bold">Perfect sign shape!</p>
+                  <p className="text-xs text-[#1e8e3e]">Keep holding your hand steady to complete this lesson.</p>
+                </div>
+              </div>
+            ) : prediction ? (
+              <div className="flex items-start gap-3 text-[#3c4043]">
+                <Hand className="w-5 h-5 flex-shrink-0 text-[#1a73e8] mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-semibold text-sm text-[#202124] mb-0.5">
+                    Currently detected: <span className="text-[#1a73e8] font-bold">{prediction}</span>
+                  </p>
+                  <p className="text-[#5f6368] leading-relaxed">
+                    Target is <span className="font-semibold text-[#202124]">{lesson.sign}</span>: {lesson.tips}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-[#5f6368]">
+                <Camera className="w-5 h-5 flex-shrink-0 text-[#80868b]" />
+                <p className="text-xs">
+                  Hold your hand upright in the camera frame to show the <span className="font-semibold text-[#202124]">{lesson.sign}</span> sign.
+                </p>
+              </div>
+            )}
+
+            {/* AI Custom Feedback Message */}
+            {aiFeedback && (
+              <div className="mt-3 pt-3 border-t border-[#e8eaed] flex items-start gap-2 text-xs text-[#1a73e8]">
+                <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p className="font-medium leading-relaxed">{aiFeedback}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Action Controls */}
+          <div className="mt-4 flex flex-col sm:flex-row gap-2.5">
+            {/* Direct AI Analysis Button */}
+            <button
+              onClick={handleAnalyzeWithAi}
+              disabled={isAnalyzingAi || !camStarted}
+              className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#1a73e8] to-[#1557b0] hover:from-[#1557b0] hover:to-[#0d47a1] disabled:opacity-50 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm text-sm"
+            >
+              {isAnalyzingAi ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Analyzing with AI...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-[#fbbc04]" />
+                  Verify Sign with AI
+                </>
+              )}
+            </button>
+
+            {camStarted ? (
+              <button
+                onClick={handleStop}
+                className="py-2.5 px-4 border border-[#dadce0] text-[#5f6368] hover:bg-[#f1f3f4] font-medium rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
+              >
+                <CameraOff className="w-4 h-4" /> Stop Camera
+              </button>
+            ) : (
               <button
                 onClick={handleStart}
-                className="flex-1 py-2.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-colors"
+                className="py-2.5 px-4 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-colors text-sm"
               >
                 <Camera className="w-4 h-4" /> Start Camera
               </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => { handleStop(); }}
-                  className="flex-1 py-2.5 border border-[#dadce0] text-[#5f6368] hover:bg-[#f1f3f4] font-medium rounded-xl flex items-center justify-center gap-2 transition-colors"
-                >
-                  <CameraOff className="w-4 h-4" /> Stop Camera
-                </button>
-                {testResult === "incorrect" && (
-                  <button
-                    onClick={onRetry}
-                    className="flex-1 py-2.5 bg-[#fce8e6] text-[#ea4335] hover:bg-[#fad2cf] font-medium rounded-xl flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <RotateCcw className="w-4 h-4" /> Try Again
-                  </button>
-                )}
-              </>
             )}
           </div>
         </div>
 
-        {/* Reminder */}
+        {/* Reminder footer */}
         <div className="px-5 py-3 bg-[#f8f9fa] border-t border-[#f1f3f4]">
           <p className="text-xs text-[#5f6368] text-center">
             Reminder: <span className="font-medium text-[#3c4043]">{lesson.howTo[0]}</span>

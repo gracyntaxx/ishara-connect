@@ -10,11 +10,12 @@ export const APP_TAGLINE = "Talk with signs. Understand with text.";
 export const SUPPORTED_SIGNS = [
   "Hello",
   "Thank You",
+  "Sorry",
+  "Bye",
+  "Help",
   "Yes",
   "No",
-  "Help",
   "Good",
-  "Sorry",
   "Please",
 ] as const;
 
@@ -24,11 +25,12 @@ export type SignLabel = (typeof SUPPORTED_SIGNS)[number];
 export const SIGN_HINTS: Record<SignLabel, string> = {
   Hello: "Open palm facing the camera, fingers spread apart.",
   "Thank You": "Flat hand, all four fingers straight and held together.",
-  Yes: "Closed fist, thumb resting against the side.",
-  No: "Index and middle finger straight and pressed together.",
+  Sorry: "Closed fist (A-hand) placed on chest.",
+  Bye: "Open palm facing the camera, waving side to side.",
   Help: "Thumbs up — thumb out, all other fingers curled.",
   Good: "Index and middle finger up in a wide V shape.",
-  Sorry: "Thumb and little finger out, middle three curled in.",
+  Yes: "Closed fist, thumb resting against the side.",
+  No: "Index and middle finger straight and pressed together.",
   Please: "Thumb and index tips touching in a ring, other fingers up.",
 };
 
@@ -36,11 +38,12 @@ export const SIGN_HINTS: Record<SignLabel, string> = {
 export const SIGN_GLOSS: Record<SignLabel, string> = {
   Hello: "HELLO",
   "Thank You": "THANK-YOU",
-  Yes: "YES",
-  No: "NO",
+  Sorry: "SORRY",
+  Bye: "BYE",
   Help: "HELP",
   Good: "GOOD",
-  Sorry: "SORRY",
+  Yes: "YES",
+  No: "NO",
   Please: "PLEASE",
 };
 

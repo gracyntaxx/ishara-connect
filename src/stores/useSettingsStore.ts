@@ -92,8 +92,11 @@ const initialState = {
   enableSpeechRecognition: true,
   speechRecognitionLanguage: "en-US",
   enableLocalClassifier: true,
-  enableGeminiFallback: false,
-  geminiApiKey: null,
+  enableGeminiFallback: Boolean(
+    typeof import.meta !== "undefined" && import.meta.env?.VITE_GEMINI_API_KEY,
+  ),
+  geminiApiKey:
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_GEMINI_API_KEY) || null,
   showConfidenceScores: true,
   showHandLandmarks: false,
   signEmitCooldownMs: 1600,

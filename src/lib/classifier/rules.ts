@@ -129,7 +129,17 @@ const RULES: Rule[] = [
     score: (f) => {
       const allCurled = fingers(f, [false, false, false, false, false]);
       const thumbSide = clamp01(f.thumbIndexGap / 0.25);
-      return clamp01(0.7 * allCurled + 0.3 * thumbSide);
+      return clamp01(0.75 * allCurled + 0.25 * thumbSide);
+    },
+  },
+  {
+    // Bye: open hand waving / high 5-hand.
+    // All 5 fingers extended and spread, held up for wave.
+    label: "Bye",
+    score: (f) => {
+      const allExt = fingers(f, [true, true, true, true, true]);
+      const wideSpread = clamp01((f.spread - 0.32) / 0.35);
+      return clamp01(0.6 * allExt + 0.4 * wideSpread);
     },
   },
   {
