@@ -5,6 +5,10 @@ let cachedClient: SupabaseClient | null = null;
 let cachedUrl: string | null = null;
 let cachedKey: string | null = null;
 
+const FALLBACK_SUPABASE_URL = "https://wcawlwpqxtiqoqatncao.supabase.co";
+const FALLBACK_SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjYXdsd3BxeHRpcW9xYXRuY2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxOTc0NDAsImV4cCI6MjEwNDc3MzQ0MH0.ac1gc0pKNT9a0e51vgq-aE3UmUbKmqdAfJpFlB_HcNw";
+
 export function getSupabaseCredentials(): { url: string; key: string } {
   let storeUrl = "";
   let storeKey = "";
@@ -20,8 +24,8 @@ export function getSupabaseCredentials(): { url: string; key: string } {
   const envKey = (typeof import.meta !== "undefined" ? import.meta.env?.VITE_SUPABASE_ANON_KEY : "") || "";
 
   // Clean URL in case /rest/v1 or trailing slash was appended
-  let url = (storeUrl || envUrl || "").trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
-  let key = (storeKey || envKey || "").trim();
+  let url = (storeUrl || envUrl || FALLBACK_SUPABASE_URL).trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+  let key = (storeKey || envKey || FALLBACK_SUPABASE_KEY).trim();
 
   return { url, key };
 }

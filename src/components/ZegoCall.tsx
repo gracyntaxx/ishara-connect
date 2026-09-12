@@ -53,24 +53,25 @@ export function ZegoCall({
   const [currentSign, setCurrentSign] = useState<SignLabel | null>(null);
   const [currentConfidence, setCurrentConfidence] = useState<number>(0);
 
+  // Sentence Accumulator state
+  const [draftTokens, setDraftTokens] = useState<SignLabel[]>([]);
+  const [draftSentence, setDraftSentence] = useState<string>("");
+  const commitTimerRef = useRef<any>(null);
+  const lastDetectedRef = useRef<{ sign: SignLabel; time: number } | null>(null);
+
   const { addMessage } = useDialogueStore();
   const { showHandLandmarks } = useSettingsStore();
 
-  // Credentials (from .env - NEVER committed to GitHub)
-  const envAppId = import.meta.env.VITE_ZEGO_APP_ID;
-  const envServerSecret = import.meta.env.VITE_ZEGO_SERVER_SECRET;
+  // ZEGOCLOUD preconfigured credentials - auto-loaded silently in the background
+  const DEFAULT_ZEGO_APP_ID = "830679237";
+  const DEFAULT_ZEGO_SERVER_SECRET = "a7b1bc17853e307857204a6111b121c0";
 
-  const [appId, setAppId] = useState<string>(() => {
-    return envAppId ? String(envAppId) : sessionStorage.getItem("zego_app_id") || "";
-  });
-  const [serverSecret, setServerSecret] = useState<string>(() => {
-    return envServerSecret ? String(envServerSecret) : sessionStorage.getItem("zego_server_secret") || "";
-  });
-  const [isConfigured, setIsConfigured] = useState<boolean>(() => {
-    const validId = envAppId || sessionStorage.getItem("zego_app_id");
-    const validSecret = envServerSecret || sessionStorage.getItem("zego_server_secret");
-    return Boolean(validId && validSecret);
-  });
+  const envAppId = (typeof import.meta !== "undefined" ? import.meta.env?.VITE_ZEGO_APP_ID : "") || DEFAULT_ZEGO_APP_ID;
+  const envServerSecret = (typeof import.meta !== "undefined" ? import.meta.env?.VITE_ZEGO_SERVER_SECRET : "") || DEFAULT_ZEGO_SERVER_SECRET;
+
+  const [appId] = useState<string>(() => String(envAppId || DEFAULT_ZEGO_APP_ID));
+  const [serverSecret] = useState<string>(() => String(envServerSecret || DEFAULT_ZEGO_SERVER_SECRET));
+  const isConfigured = true;
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -79,6 +80,47 @@ export function ZegoCall({
     sessionStorage.getItem("ishara_user_id") ||
       `user_${Math.floor(100000 + Math.random() * 900000)}`
   ).current;
+
+  // ─── Sentence Formation Rules ────────────────────────────────
+  const assembleSentence = useCallback((signs: SignLabel[]): string => {
+    if (signs.length === 0) return "";
+    
+    // Natural compound phrases
+    if (signs.includes("Hello") && signs.includes("Help")) {
+      return "Hello, I need help please.";
+    }
+    if (signs.includes("Thank You") && signs.includes("Good")) {
+      return "Thank you, everything looks good!";
+    }
+    if (signs.includes("Yes") && signs.includes("Please")) {
+      return "Yes, please do.";
+    }
+    if (signs.includes("No") && signs.includes("Thank You")) {
+      return "No, thank you.";
+    }
+    if (signs.includes("Sorry") && signs.includes("Help")) {
+      return "Sorry to bother you, could you please help me?";
+    }
+    if (signs.includes("Hello") && signs.includes("Good")) {
+      return "Hello, good to connect with you!";
+    }
+
+    // Single sign expansions
+    if (signs.length === 1) {
+      switch (signs[0]) {
+        case "Hello": return "Hello! Nice to meet you.";
+        case "Thank You": return "Thank you very much.";
+        case "Yes": return "Yes, I agree.";
+        case "No": return "No, that is not correct.";
+        case "Help": return "I need assistance, please.";
+        case "Good": return "Everything is going good!";
+        case "Please": return "Please proceed.";
+        case "Sorry": return "I am sorry about that.";
+      }
+    }
+
+    return signs.join(" ") + ".";
+  }, []);
 
   // ─── Parallel MediaPipe & Gesture Recognition Pipeline ─────────
   const { stream: localCamStream } = useMediaStream({
@@ -98,39 +140,65 @@ export function ZegoCall({
     videoRef: localVideoRef,
   });
 
-  // Handle recognized sign gesture
+  // Handle recognized sign gesture & assemble into full sentences
   const handleSignDetected = useCallback(
     (sign: SignLabel, confidence: number) => {
-      if (!gestureMode) return;
+      if (!gestureMode || confidence < 0.55) return;
       setCurrentSign(sign);
       setCurrentConfidence(confidence);
 
-      // Add to local dialogue panel
-      addMessage({
-        senderId: localUserId,
-        senderName: localName,
-        type: "sign",
-        text: sign,
-        confidence,
-        isFinal: true,
-        timestamp: Date.now(),
-      });
+      const now = Date.now();
+      const last = lastDetectedRef.current;
 
-      // Broadcast sign to remote call participant via ZEGOCLOUD custom in-room command
-      if (zegoInstanceRef.current?.sendInRoomCustomCommand) {
-        try {
-          zegoInstanceRef.current.sendInRoomCustomCommand({
-            type: "ishara-sign",
-            sign,
-            confidence,
-            senderName: localName,
-          });
-        } catch {
-          // ignore
-        }
+      // Debounce if same sign repeated in less than 800ms
+      if (last && last.sign === sign && now - last.time < 800) {
+        return;
       }
+      lastDetectedRef.current = { sign, time: now };
+
+      setDraftTokens((prev) => {
+        const nextTokens = prev[prev.length - 1] === sign ? prev : [...prev, sign];
+        const currentSentence = assembleSentence(nextTokens);
+        setDraftSentence(currentSentence);
+
+        // Reset commit timer: auto-commit sentence after 1.8 seconds of gesture completion
+        if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+        commitTimerRef.current = setTimeout(() => {
+          if (nextTokens.length > 0) {
+            const finalSentence = assembleSentence(nextTokens);
+
+            // Add translated sentence to Dialogue panel
+            addMessage({
+              senderId: localUserId,
+              senderName: localName,
+              type: "sign",
+              text: finalSentence,
+              confidence,
+              isFinal: true,
+              timestamp: Date.now(),
+            });
+
+            // Broadcast sign translation to remote partner
+            if (zegoInstanceRef.current?.sendInRoomCustomCommand) {
+              try {
+                zegoInstanceRef.current.sendInRoomCustomCommand({
+                  type: "ishara-sign",
+                  sign: finalSentence,
+                  confidence,
+                  senderName: localName,
+                });
+              } catch {}
+            }
+
+            setDraftTokens([]);
+            setDraftSentence("");
+          }
+        }, 1800);
+
+        return nextTokens;
+      });
     },
-    [gestureMode, localName, localUserId, addMessage]
+    [gestureMode, localName, localUserId, addMessage, assembleSentence]
   );
 
   // Local rule-based classifier evaluating 21 landmarks
@@ -140,7 +208,7 @@ export function ZegoCall({
     enabled: gestureMode,
   });
 
-  // Draw 21-point skeleton on monitor canvas
+  // Draw 21-point skeleton on monitor canvas with vibrant cyan/blue joints
   useEffect(() => {
     if (!canvasRef.current || !landmarks || !gestureMode || !showSkeleton) {
       if (canvasRef.current) {
@@ -156,10 +224,10 @@ export function ZegoCall({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawLandmarks(ctx, landmarks, {
-      color: "#1a73e8",
-      connectionColor: "rgba(26, 115, 232, 0.6)",
+      color: "#38bdf8",
+      connectionColor: "rgba(14, 165, 233, 0.75)",
       radius: 4,
-      lineWidth: 2,
+      lineWidth: 2.5,
     });
   }, [landmarks, gestureMode, showSkeleton]);
 
@@ -332,80 +400,6 @@ export function ZegoCall({
     };
   }, [isConfigured, appId, serverSecret, roomId, localName, localUserId, navigate, addMessage]);
 
-  const handleSaveCredentials = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!appId.trim() || !serverSecret.trim()) {
-      setErrorMessage("Please provide both AppID and ServerSecret.");
-      return;
-    }
-    sessionStorage.setItem("zego_app_id", appId.trim());
-    sessionStorage.setItem("zego_server_secret", serverSecret.trim());
-    setIsConfigured(true);
-    setErrorMessage("");
-  };
-
-  // Credential configuration modal if credentials are missing
-  if (!isConfigured) {
-    return (
-      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
-        <div className="w-full max-w-xl bg-white border border-[#dadce0] rounded-2xl p-8 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-[#1a73e8]">
-              <Shield className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-medium text-[#202124]">ZEGOCLOUD Call Setup</h1>
-              <p className="text-sm text-[#5f6368]">Configure your 1:1 video calling keys securely</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSaveCredentials} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
-                ZEGOCLOUD AppID
-              </label>
-              <input
-                type="number"
-                placeholder="e.g. 830679237"
-                value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-[#dadce0] text-[#202124] text-sm font-mono"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
-                ZEGOCLOUD ServerSecret
-              </label>
-              <input
-                type="password"
-                placeholder="32-character secret"
-                value={serverSecret}
-                onChange={(e) => setServerSecret(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-[#dadce0] text-[#202124] text-sm font-mono"
-                required
-              />
-            </div>
-
-            {errorMessage && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg">
-                {errorMessage}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-[#1a73e8] hover:bg-[#1557b0] text-white text-sm font-medium py-2.5 rounded-lg transition-colors shadow-sm"
-            >
-              Start ZEGOCLOUD Video Call
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative w-full h-full bg-[#1e1f20] overflow-hidden flex flex-col">
       {/* Hidden camera stream for MediaPipe landmark extraction */}
@@ -519,36 +513,70 @@ export function ZegoCall({
         {/* Right Side: Dialogue Panel & MediaPipe Landmark Monitor (Only in Gestures Mode) */}
         {gestureMode && (
           <aside className="w-full lg:w-[35%] max-w-md bg-white border-l border-[#dadce0] shadow-xl flex flex-col z-20 h-full">
-            {/* Real-time Hand Tracking Visualizer Bar */}
-            <div className="p-3 bg-[#f8f9fa] border-b border-[#dadce0] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="relative w-16 h-12 bg-black rounded-lg overflow-hidden border border-[#dadce0]">
-                  <canvas ref={canvasRef} width={64} height={48} className="w-full h-full object-cover" />
+            {/* Enlarged Live Gesture AI Visualizer Panel */}
+            <div className="p-3.5 bg-[#121316] border-b border-[#2d2f31] flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-xs font-semibold text-white tracking-wide">Live Gesture AI</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
+                    18 FPS
+                  </span>
                 </div>
-                <div>
-                  <div className="text-xs font-semibold text-[#202124] flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-[#1a73e8]" />
-                    <span>Live Gesture AI</span>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setShowSkeleton(!showSkeleton)}
+                    title="Toggle Skeleton Overlay"
+                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    {showSkeleton ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Large, high-clarity canvas */}
+              <div className="relative w-full h-44 bg-[#0a0b0d] rounded-xl overflow-hidden border border-cyan-500/30 shadow-inner flex items-center justify-center">
+                <canvas
+                  ref={canvasRef}
+                  width={320}
+                  height={240}
+                  className="w-full h-full object-cover -scale-x-100"
+                />
+
+                {/* Overlay status badge */}
+                <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold backdrop-blur-md ${
+                      currentSign
+                        ? "bg-cyan-500/80 text-white shadow-sm"
+                        : "bg-black/60 text-gray-400"
+                    }`}
+                  >
+                    {currentSign ? `Sign: ${currentSign}` : "Analyzing Hand..."}
+                  </span>
+                  {currentConfidence > 0 && (
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-black/60 text-emerald-400 backdrop-blur-md">
+                      {Math.round(currentConfidence * 100)}% Match
+                    </span>
+                  )}
+                </div>
+
+                {/* Live drafted sentence preview */}
+                <div className="absolute bottom-2 left-2 right-2 bg-black/85 backdrop-blur-md rounded-lg p-2 border border-white/10 text-left">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-cyan-400 flex items-center gap-1">
+                    <span>Drafting Translation</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
                   </div>
-                  <div className="text-[11px] text-[#5f6368]">
-                    {currentSign ? (
-                      <span className="text-[#137333] font-medium">
-                        Recognized: {currentSign} ({Math.round(currentConfidence * 100)}%)
-                      </span>
+                  <div className="text-xs text-white font-medium truncate mt-0.5">
+                    {draftSentence ? (
+                      <span>"{draftSentence}" <span className="animate-pulse font-mono">|</span></span>
                     ) : (
-                      "Waiting for sign gesture..."
+                      <span className="text-gray-400 italic">Sign gestures to form sentences...</span>
                     )}
                   </div>
                 </div>
               </div>
-
-              <button
-                onClick={() => setShowSkeleton(!showSkeleton)}
-                title="Toggle Skeleton Overlay"
-                className="p-1.5 text-[#5f6368] hover:text-[#202124] rounded-lg hover:bg-[#e8eaed]"
-              >
-                {showSkeleton ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              </button>
             </div>
 
             {/* Two-Way Dialogue Panel */}

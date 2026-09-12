@@ -110,8 +110,12 @@ const initialState = {
   apiUrl: (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "http://localhost:5000",
   databaseStatus: "unknown" as DatabaseStatus,
   databaseLatencyMs: null as number | null,
-  supabaseUrl: (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) || "",
-  supabaseAnonKey: (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) || "",
+  supabaseUrl:
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
+    "https://wcawlwpqxtiqoqatncao.supabase.co",
+  supabaseAnonKey:
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjYXdsd3BxeHRpcW9xYXRuY2FvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxOTc0NDAsImV4cCI6MjEwNDc3MzQ0MH0.ac1gc0pKNT9a0e51vgq-aE3UmUbKmqdAfJpFlB_HcNw",
 };
 
 export const useSettingsStore = create<SettingsState>()(

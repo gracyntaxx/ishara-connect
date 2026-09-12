@@ -129,6 +129,8 @@ export async function apiLogin(email: string, password: string): Promise<ApiResp
         let msg = error.message;
         if (msg.toLowerCase().includes("invalid login credentials")) {
           msg = "Invalid email or password. If you don't have an account yet, click 'Register' above to create one!";
+        } else if (msg.toLowerCase().includes("email not confirmed")) {
+          msg = "Your account is created! Supabase has sent a confirmation link to your inbox. Please click the link to activate your account, or disable 'Confirm email' in Supabase Auth Settings to log in immediately.";
         }
         return {
           success: false,

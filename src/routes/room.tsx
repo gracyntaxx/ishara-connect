@@ -4,6 +4,7 @@ import { Navbar, Footer } from "../components";
 import {
   User,
   Video,
+  Hand,
   Brain,
   MessageSquare,
   AlertCircle,

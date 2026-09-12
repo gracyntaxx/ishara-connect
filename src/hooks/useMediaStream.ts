@@ -29,8 +29,17 @@ export function useMediaStream({ video = true, audio = true }: Options = {}) {
     setPermissionState("requesting");
     setError(null);
 
+    const videoConstraints: MediaTrackConstraints | boolean = video
+      ? {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 24, max: 30 },
+          facingMode: "user",
+        }
+      : false;
+
     navigator.mediaDevices
-      .getUserMedia({ video, audio })
+      .getUserMedia({ video: videoConstraints, audio })
       .then((media) => {
         if (cancelled) {
           media.getTracks().forEach((track) => track.stop());
@@ -60,6 +69,16 @@ export function useMediaStream({ video = true, audio = true }: Options = {}) {
 
   const retryStream = useCallback(() => setAttempt((v) => v + 1), []);
   const requestPermission = retryStream; // alias
+  const startStream = retryStream; // alias for initiating or restarting camera
+
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setStream(null);
+    setPermissionState("idle");
+  }, []);
 
   const toggleAudio = useCallback(
     (enabled?: boolean) => {
@@ -95,6 +114,8 @@ export function useMediaStream({ video = true, audio = true }: Options = {}) {
     error,
     retryStream,
     requestPermission,
+    startStream,
+    stopStream,
     toggleAudio,
     toggleVideo,
     toggleTrack,

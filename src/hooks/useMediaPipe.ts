@@ -67,42 +67,62 @@ export function useMediaPipe({ videoRef, targetFps }: UseMediaPipeOptions) {
     }
   }, [videoRef, frameInterval]);
 
-  // Lazy-initialise the landmarker using configured MediaPipe options
+let sharedFilesetPromise: Promise<any> | null = null;
+let sharedLandmarker: any = null;
+let sharedLandmarkerPromise: Promise<any> | null = null;
+
+async function getSharedLandmarker(options: {
+  modelAssetUrl: string;
+  mediapipeDelegate: string;
+  numHands: number;
+  minConfidence: number;
+}) {
+  if (sharedLandmarker) return sharedLandmarker;
+  if (sharedLandmarkerPromise) return sharedLandmarkerPromise;
+
+  sharedLandmarkerPromise = (async () => {
+    const vision = await import("@mediapipe/tasks-vision");
+    if (!sharedFilesetPromise) {
+      sharedFilesetPromise = vision.FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_URL);
+    }
+    const fileset = await sharedFilesetPromise;
+    const instance = await vision.HandLandmarker.createFromOptions(fileset, {
+      baseOptions: {
+        modelAssetPath: options.modelAssetUrl || HAND_LANDMARKER_MODEL_URL,
+        delegate: (options.mediapipeDelegate as any) || "GPU",
+      },
+      numHands: options.numHands || 1,
+      minHandDetectionConfidence: options.minConfidence ?? 0.5,
+      minHandPresenceConfidence: options.minConfidence ?? 0.5,
+      minTrackingConfidence: options.minConfidence ?? 0.5,
+      runningMode: "VIDEO",
+    });
+    sharedLandmarker = instance;
+    return instance;
+  })();
+
+  return sharedLandmarkerPromise;
+}
+
+// Lazy-initialise the landmarker using configured MediaPipe options
   const init = useCallback(async () => {
     if (landmarkerRef.current) return;
-    if (initPromiseRef.current) {
-      await initPromiseRef.current;
-      return;
+    setStatus("loading");
+    setError(null);
+    try {
+      const instance = await getSharedLandmarker({
+        modelAssetUrl,
+        mediapipeDelegate,
+        numHands,
+        minConfidence: minDetectionConfidence ?? 0.5,
+      });
+      landmarkerRef.current = instance;
+      setStatus("ready");
+    } catch (err: any) {
+      setStatus("error");
+      setError(err?.message || "Hand tracking couldn't start. Check your connection and reload.");
     }
-
-    const promise = (async () => {
-      setStatus("loading");
-      setError(null);
-      try {
-        const vision = await import("@mediapipe/tasks-vision");
-        const fileset = await vision.FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_URL);
-        const instance = await vision.HandLandmarker.createFromOptions(fileset, {
-          baseOptions: {
-            modelAssetPath: modelAssetUrl || HAND_LANDMARKER_MODEL_URL,
-            delegate: mediapipeDelegate || "GPU",
-          },
-          numHands: numHands || 1,
-          minHandDetectionConfidence: minDetectionConfidence ?? 0.5,
-          minHandPresenceConfidence: minDetectionConfidence ?? 0.5,
-          minTrackingConfidence: minTrackingConfidence ?? 0.5,
-          runningMode: "VIDEO",
-        });
-        landmarkerRef.current = instance as unknown as typeof landmarkerRef.current;
-        setStatus("ready");
-      } catch (err: any) {
-        setStatus("error");
-        setError(err?.message || "Hand tracking couldn't start. Check your connection and reload.");
-      }
-    })();
-
-    initPromiseRef.current = promise;
-    await promise;
-  }, [mediapipeDelegate, minDetectionConfidence, minTrackingConfidence, numHands, modelAssetUrl]);
+  }, [mediapipeDelegate, minDetectionConfidence, numHands, modelAssetUrl]);
 
   const start = useCallback(() => {
     if (activeRef.current) return;
@@ -125,19 +145,11 @@ export function useMediaPipe({ videoRef, targetFps }: UseMediaPipeOptions) {
     setLandmarks(null);
   }, []);
 
-  // Cleanup on unmount
+  // Cleanup on unmount (keep shared landmarker hot in memory)
   useEffect(() => {
     return () => {
       activeRef.current = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (landmarkerRef.current) {
-        try {
-          landmarkerRef.current.close();
-        } catch {
-          // ignore
-        }
-        landmarkerRef.current = null;
-      }
     };
   }, []);
 

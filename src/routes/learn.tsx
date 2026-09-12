@@ -17,6 +17,11 @@ import {
   Shield,
   Lightbulb,
   Zap,
+  Play,
+  Volume2,
+  Lock,
+  Unlock,
+  Check,
 } from "lucide-react";
 import { SUPPORTED_SIGNS, SIGN_HINTS, SignLabel } from "../lib/constants";
 import { useMediaStream } from "../hooks/useMediaStream";
@@ -33,126 +38,203 @@ export const Route = createFileRoute("/learn")({
   component: LearnPage,
 });
 
-interface LessonItem {
+export interface LevelItem {
+  level: number;
   sign: SignLabel;
   title: string;
-  unit: number;
-  unitTitle: string;
+  category: "Greetings" | "Responses" | "Politeness" | "Assistance";
   description: string;
-  handIllustration: string;
-  tips: string[];
+  handDiagram: {
+    palmDirection: string;
+    extendedFingers: string;
+    motion: string;
+  };
+  keySteps: string[];
+  sampleSentence: string;
 }
 
-const LESSONS: LessonItem[] = [
+export const LEVELS: LevelItem[] = [
   {
+    level: 1,
     sign: "Hello",
     title: "Greeting (Hello)",
-    unit: 1,
-    unitTitle: "Unit 1: Essentials & Greetings",
-    description: "Open palm facing forward towards the camera with all five fingers spread naturally.",
-    handIllustration: "🖐️",
-    tips: [
-      "Keep your palm facing directly at the camera lens.",
-      "Spread all fingers apart comfortably.",
-      "Hold your hand at chest height.",
+    category: "Greetings",
+    description: "Raise open palm forward toward the camera with all five fingers spread naturally, waving gently.",
+    handDiagram: {
+      palmDirection: "Facing Camera (Forward)",
+      extendedFingers: "All 5 fingers extended and spread",
+      motion: "Side-to-side gentle waving motion",
+    },
+    keySteps: [
+      "Position hand at chest height in center frame",
+      "Face your palm directly at the webcam lens",
+      "Spread all 5 fingers apart comfortably",
+      "Hold still for 1.2s to verify gesture alignment",
     ],
+    sampleSentence: "Hello! Nice to meet you.",
   },
   {
+    level: 2,
     sign: "Thank You",
     title: "Gratitude (Thank You)",
-    unit: 1,
-    unitTitle: "Unit 1: Essentials & Greetings",
-    description: "Flat hand with all four fingers straight, pressed together, thumb alongside palm.",
-    handIllustration: "✋",
-    tips: [
-      "Keep all four fingers pressed closely together.",
-      "Keep your palm flat without curling knuckles.",
-      "Extend your hand forward gently.",
+    category: "Politeness",
+    description: "Flat hand with all four fingers pressed together and thumb alongside, moving from chin forward.",
+    handDiagram: {
+      palmDirection: "Facing inward to chin, then forward",
+      extendedFingers: "4 fingers straight and pressed together",
+      motion: "Extend smoothly forward toward camera",
+    },
+    keySteps: [
+      "Keep index, middle, ring, and pinky pressed together",
+      "Keep palm completely flat (no curled knuckles)",
+      "Move hand gently forward toward the other person",
     ],
+    sampleSentence: "Thank you for your help today.",
   },
   {
-    sign: "Please",
-    title: "Politeness (Please)",
-    unit: 1,
-    unitTitle: "Unit 1: Essentials & Greetings",
-    description: "Form an 'OK' ring with your thumb and index fingertip touching, remaining three fingers extended.",
-    handIllustration: "👌",
-    tips: [
-      "Touch the tips of your thumb and index finger together.",
-      "Keep middle, ring, and pinky fingers upright.",
-      "Hold the circular ring steady.",
-    ],
-  },
-  {
+    level: 3,
     sign: "Yes",
     title: "Affirmation (Yes)",
-    unit: 2,
-    unitTitle: "Unit 2: Responses & Agreement",
-    description: "Closed fist with thumb resting comfortably against the side of your curled fingers.",
-    handIllustration: "✊",
-    tips: [
-      "Curl all four fingers completely into your palm.",
-      "Rest your thumb against your index finger side.",
-      "Present the front of your knuckles clearly.",
+    category: "Responses",
+    description: "Form a solid closed fist and nod the wrist up and down like a nodding head.",
+    handDiagram: {
+      palmDirection: "Knuckles facing camera",
+      extendedFingers: "None (Fist closed, thumb across)",
+      motion: "Gentle vertical nod of the wrist",
+    },
+    keySteps: [
+      "Curl all four fingers firmly into your palm",
+      "Rest your thumb against the side of your index finger",
+      "Present front knuckles to camera and hold steady",
     ],
+    sampleSentence: "Yes, I understand clearly.",
   },
   {
+    level: 4,
     sign: "No",
     title: "Negation (No)",
-    unit: 2,
-    unitTitle: "Unit 2: Responses & Agreement",
-    description: "Index and middle fingers extended straight upward and pressed together, other fingers curled.",
-    handIllustration: "✌️",
-    tips: [
-      "Point index and middle fingers straight up.",
-      "Keep them pressed tightly together.",
-      "Tuck ring finger and pinky into your palm with thumb.",
+    category: "Responses",
+    description: "Extend index and middle fingers upward pressed closely together, while ring and pinky are tucked.",
+    handDiagram: {
+      palmDirection: "Facing camera",
+      extendedFingers: "Index & Middle fingers straight together",
+      motion: "Snap downward against thumb",
+    },
+    keySteps: [
+      "Point index and middle fingers straight up",
+      "Keep them pressed tightly together (two fingers)",
+      "Tuck ring finger and pinky into palm with thumb",
     ],
+    sampleSentence: "No, that is not required.",
   },
   {
+    level: 5,
+    sign: "Please",
+    title: "Politeness (Please)",
+    category: "Politeness",
+    description: "Form an 'OK' circle with thumb and index tips touching, while middle, ring, and pinky stay extended.",
+    handDiagram: {
+      palmDirection: "Facing forward or chest",
+      extendedFingers: "Middle, Ring, Pinky upright; Index + Thumb ring",
+      motion: "Gentle circular rub or steady presentation",
+    },
+    keySteps: [
+      "Touch the tips of your thumb and index finger together into an 'O'",
+      "Keep remaining three fingers pointed upright",
+      "Display the clear ring circle to the camera",
+    ],
+    sampleSentence: "Please repeat that once more.",
+  },
+  {
+    level: 6,
     sign: "Good",
     title: "Approval (Good)",
-    unit: 2,
-    unitTitle: "Unit 2: Responses & Agreement",
-    description: "Peace / Victory shape — index and middle fingers extended in an open, wide V shape.",
-    handIllustration: "✌️",
-    tips: [
-      "Spread index and middle finger apart into a V.",
-      "Palm can face slightly towards the camera.",
-      "Keep wrist steady.",
+    category: "Politeness",
+    description: "The classic open Victory / V shape — index and middle fingers extended apart in a clear V.",
+    handDiagram: {
+      palmDirection: "Facing camera",
+      extendedFingers: "Index & Middle spread wide in a V",
+      motion: "Static upright posture",
+    },
+    keySteps: [
+      "Extend index and middle fingers wide apart",
+      "Curl ring and pinky fingers tightly against palm",
+      "Hold wrist steady in the center of the frame",
     ],
+    sampleSentence: "That is very good work!",
   },
   {
-    sign: "Sorry",
-    title: "Apology (Sorry)",
-    unit: 3,
-    unitTitle: "Unit 3: Emotions & Requests",
-    description: "Thumb and little pinky finger extended out, with the middle three fingers curled in.",
-    handIllustration: "🤙",
-    tips: [
-      "Extend your thumb and little finger fully.",
-      "Curl middle three fingers firmly into palm.",
-      "Often known as the shaka / apology sign shape.",
-    ],
-  },
-  {
+    level: 7,
     sign: "Help",
     title: "Assistance (Help)",
-    unit: 3,
-    unitTitle: "Unit 3: Emotions & Requests",
-    description: "Thumbs up gesture — thumb pointed straight upward, all four other fingers curled in a fist.",
-    handIllustration: "👍",
-    tips: [
-      "Point your thumb straight up towards the ceiling.",
-      "Curl all other fingers into a neat fist.",
-      "Hold with a clear, positive gesture.",
+    category: "Assistance",
+    description: "Thumbs-up gesture — thumb pointing straight up towards ceiling, all other fingers closed in a fist.",
+    handDiagram: {
+      palmDirection: "Side of fist to camera, thumb upright",
+      extendedFingers: "Thumb only (pointed straight up)",
+      motion: "Upward supporting motion",
+    },
+    keySteps: [
+      "Curl all four fingers into a tight fist",
+      "Point thumb straight up toward the ceiling",
+      "Keep hand steady at mid-chest level",
     ],
+    sampleSentence: "I need help with this sentence.",
+  },
+  {
+    level: 8,
+    sign: "Sorry",
+    title: "Apology (Sorry)",
+    category: "Politeness",
+    description: "Extend thumb and pinky finger fully outward, while the middle three fingers remain tucked in palm.",
+    handDiagram: {
+      palmDirection: "Facing forward",
+      extendedFingers: "Thumb and Pinky extended (Shaka/Y shape)",
+      motion: "Gentle chest circular motion",
+    },
+    keySteps: [
+      "Extend your thumb and little pinky finger fully out",
+      "Tuck middle, ring, and index fingers into palm",
+      "Present gesture clearly to camera",
+    ],
+    sampleSentence: "I am sorry for the delay.",
   },
 ];
 
+// Synthesize a pleasant harmonic chime when completing a level
+function playLevelUpChime() {
+  try {
+    if (typeof window === "undefined") return;
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+
+    // Dual-tone harmonic chime (C5 + G5)
+    [523.25, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + i * 0.08);
+
+      gain.gain.setValueAtTime(0, now + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0.18, now + i * 0.08 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.5);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.08);
+      osc.stop(now + i * 0.08 + 0.55);
+    });
+  } catch {
+    // audio not allowed
+  }
+}
+
 function LearnPage() {
-  const [selectedLesson, setSelectedLesson] = useState<LessonItem | null>(null);
-  const [stage, setStage] = useState<"learn" | "test" | "success">("learn");
+  const [currentLevelIdx, setCurrentLevelIdx] = useState<number>(0);
+  const [selectedLevel, setSelectedLevel] = useState<LevelItem | null>(null);
+  const [stage, setStage] = useState<"learn" | "test" | "celebrate">("learn");
 
   // User Stats & Progress
   const [completedSigns, setCompletedSigns] = useState<string[]>(() => {
@@ -163,6 +245,7 @@ function LearnPage() {
       return ["Hello"];
     }
   });
+
   const [xp, setXp] = useState<number>(() => {
     return Number(localStorage.getItem("ishara_user_xp") || 150);
   });
@@ -170,6 +253,7 @@ function LearnPage() {
     return Number(localStorage.getItem("ishara_user_streak") || 3);
   });
   const [unlockedBadges, setUnlockedBadges] = useState<string[]>([]);
+  const [autoAdvanceTimer, setAutoAdvanceTimer] = useState<number | null>(null);
 
   // Camera & MediaPipe testing state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -177,6 +261,7 @@ function LearnPage() {
   const [matchScore, setMatchScore] = useState<number>(0);
   const [holdProgress, setHoldProgress] = useState<number>(0);
   const [showWireframe, setShowWireframe] = useState<boolean>(true);
+  const [feedbackTip, setFeedbackTip] = useState<string>("Show your hand clearly to the camera");
 
   const userId = useRef<string>(
     sessionStorage.getItem("ishara_user_id") ||
@@ -192,7 +277,7 @@ function LearnPage() {
     });
   }, [userId]);
 
-  // MediaStream for live practice test
+  // MediaStream for live practice test (camera startup speed optimized)
   const { stream, startStream, stopStream } = useMediaStream({
     video: stage === "test",
     audio: false,
@@ -222,7 +307,7 @@ function LearnPage() {
     }
   }, [stage, startStream, stopStream, startMediaPipe, stopMediaPipe]);
 
-  // Landmark canvas drawing
+  // Landmark canvas drawing (blue glowing skeleton)
   useEffect(() => {
     if (!canvasRef.current || !landmarks || stage !== "test" || !showWireframe) {
       if (canvasRef.current) {
@@ -238,35 +323,75 @@ function LearnPage() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawLandmarks(ctx, landmarks, {
-      color: "#1a73e8",
-      connectionColor: "rgba(26, 115, 232, 0.5)",
+      color: "#38bdf8",
+      connectionColor: "rgba(14, 165, 233, 0.7)",
       radius: 4,
-      lineWidth: 2,
+      lineWidth: 2.5,
     });
   }, [landmarks, stage, showWireframe]);
 
-  // Sign detection callback during testing
+  // Handle successful mastery of a level
+  const handleLevelMastered = useCallback(
+    (levelItem: LevelItem, score: number) => {
+      playLevelUpChime();
+      setStage("celebrate");
+
+      // Update completed signs
+      const newCompleted = Array.from(new Set([...completedSigns, levelItem.sign]));
+      setCompletedSigns(newCompleted);
+      localStorage.setItem("ishara_mastered_signs", JSON.stringify(newCompleted));
+
+      const newXp = xp + 50;
+      setXp(newXp);
+      localStorage.setItem("ishara_user_xp", String(newXp));
+
+      // Sync progress & badges to Supabase
+      syncProgressToSupabase(userId, levelItem.sign, score, true);
+      if (newCompleted.length >= 1) unlockSupabaseBadge(userId, "first_sign", "First Sign");
+      if (newCompleted.length >= 4) unlockSupabaseBadge(userId, "halfway_hero", "Sign Scholar");
+      if (newCompleted.length >= 8) unlockSupabaseBadge(userId, "sign_master", "Master of Ishara");
+
+      // AUTO-ADVANCE AUTOMATICALLY AFTER 1.5 SECONDS!
+      const nextIdx = LEVELS.findIndex((l) => l.level === levelItem.level) + 1;
+      setAutoAdvanceTimer(
+        window.setTimeout(() => {
+          if (nextIdx < LEVELS.length) {
+            setSelectedLevel(LEVELS[nextIdx]);
+            setCurrentLevelIdx(nextIdx);
+            setStage("learn");
+          } else {
+            // Completed all levels!
+            setSelectedLevel(null);
+          }
+        }, 1500)
+      );
+    },
+    [completedSigns, xp, userId]
+  );
+
+  // Real-time classification & verification hold progress
   const handleSignDetected = useCallback(
     (detectedSign: SignLabel, confidence: number) => {
-      if (stage !== "test" || !selectedLesson) return;
+      if (stage !== "test" || !selectedLevel) return;
 
-      if (detectedSign === selectedLesson.sign) {
+      if (detectedSign === selectedLevel.sign && confidence >= 0.55) {
         setMatchScore(confidence);
+        setFeedbackTip("Perfect posture! Hold steady to pass...");
         setHoldProgress((prev) => {
-          const next = prev + 25;
+          const next = prev + 20; // Reaches 100% in ~1.2 seconds of holding
           if (next >= 100) {
-            // Passed test!
-            handleLessonSuccess(selectedLesson.sign, confidence);
+            handleLevelMastered(selectedLevel, confidence);
             return 100;
           }
           return next;
         });
       } else {
-        setMatchScore(0.2);
-        setHoldProgress((prev) => Math.max(0, prev - 10));
+        setMatchScore(Math.max(0.1, confidence * 0.4));
+        setHoldProgress((prev) => Math.max(0, prev - 8));
+        setFeedbackTip(`Form the "${selectedLevel.sign}" hand shape as shown in the guide`);
       }
     },
-    [stage, selectedLesson]
+    [stage, selectedLevel, handleLevelMastered]
   );
 
   useLocalClassifier({
@@ -275,36 +400,10 @@ function LearnPage() {
     enabled: stage === "test",
   });
 
-  // Success handler
-  const handleLessonSuccess = (sign: SignLabel, score: number) => {
-    setStage("success");
-
-    // Update local state & storage
-    const newCompleted = Array.from(new Set([...completedSigns, sign]));
-    setCompletedSigns(newCompleted);
-    localStorage.setItem("ishara_mastered_signs", JSON.stringify(newCompleted));
-
-    const newXp = xp + 50;
-    setXp(newXp);
-    localStorage.setItem("ishara_user_xp", String(newXp));
-
-    // Sync to Supabase
-    syncProgressToSupabase(userId, sign, score, true);
-
-    // Check for badge unlocks
-    if (newCompleted.length >= 1) {
-      unlockSupabaseBadge(userId, "first_sign", "First Sign");
-    }
-    if (newCompleted.length >= 5) {
-      unlockSupabaseBadge(userId, "sign_scholar", "Sign Scholar");
-    }
-    if (newCompleted.length >= 8) {
-      unlockSupabaseBadge(userId, "sign_master", "Master of Ishara");
-    }
-  };
-
-  const startLesson = (lesson: LessonItem) => {
-    setSelectedLesson(lesson);
+  const openLevel = (levelItem: LevelItem) => {
+    if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
+    setSelectedLevel(levelItem);
+    setCurrentLevelIdx(LEVELS.findIndex((l) => l.level === levelItem.level));
     setStage("learn");
   };
 
@@ -314,22 +413,22 @@ function LearnPage() {
 
       <main className="flex-1 py-8 px-4">
         <div className="mx-auto max-w-5xl">
-          {/* Top Header & Duolingo-style XP / Streaks Bar */}
+          {/* Academy Header & Duolingo-style XP / Streak Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-[#dadce0] rounded-2xl p-6 mb-8 shadow-sm">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f0fe] text-[#1a73e8] text-xs font-semibold mb-2">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Interactive Learning Academy</span>
+                <span>Level-by-Level Interactive Learning</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-normal text-[#202124] tracking-tight">
-                Learn Sign Language
+                Sign Language Learning Academy
               </h1>
               <p className="text-xs sm:text-sm text-[#5f6368] mt-1">
-                Step-by-step interactive lessons powered by live MediaPipe camera feedback.
+                Step through structured levels with video demonstration guides and live camera AI testing.
               </p>
             </div>
 
-            {/* Gamification Stats Bar */}
+            {/* Gamification Stats */}
             <div className="flex items-center gap-4 bg-[#f8f9fa] border border-[#e8eaed] rounded-xl px-4 py-3 self-start sm:self-auto">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#ea4335]">
                 <Flame className="w-4 h-4 fill-current" />
@@ -346,74 +445,134 @@ function LearnPage() {
                 className="flex items-center gap-1.5 text-xs font-semibold text-[#1a73e8] hover:underline"
               >
                 <Trophy className="w-4 h-4" />
-                <span>Leaderboard</span>
+                <span>Rankings</span>
               </Link>
             </div>
           </div>
 
-          {/* Active Lesson Modal / View */}
-          {selectedLesson ? (
+          {/* Active Level Card */}
+          {selectedLevel ? (
             <div className="bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-8 mb-8 shadow-md">
-              {/* Back to roadmap */}
-              <button
-                type="button"
-                onClick={() => setSelectedLesson(null)}
-                className="text-xs text-[#5f6368] hover:text-[#202124] flex items-center gap-1.5 mb-6 font-medium"
-              >
-                &larr; Back to Curriculum
-              </button>
+              {/* Top Navigation Row */}
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#e8eaed]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLevel(null)}
+                  className="text-xs text-[#5f6368] hover:text-[#202124] flex items-center gap-1.5 font-medium transition-colors"
+                >
+                  &larr; Back to All Levels
+                </button>
 
-              {/* Stage 1: Learn the Sign */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#e8f0fe] text-[#1a73e8]">
+                    Level {selectedLevel.level} of {LEVELS.length}
+                  </span>
+                  <span className="text-xs text-[#5f6368]">{selectedLevel.category}</span>
+                </div>
+              </div>
+
+              {/* Stage 1: Learn with Visual Demonstration Guide */}
               {stage === "learn" && (
-                <div className="max-w-2xl mx-auto text-center space-y-6">
-                  <div className="w-24 h-24 mx-auto rounded-3xl bg-[#e8f0fe] border-2 border-[#1a73e8]/20 flex items-center justify-center text-5xl shadow-sm">
-                    {selectedLesson.handIllustration}
-                  </div>
-
-                  <div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#1a73e8]">
-                      {selectedLesson.unitTitle}
-                    </span>
-                    <h2 className="text-2xl font-bold text-[#202124] mt-1">
-                      {selectedLesson.title}
-                    </h2>
-                    <p className="text-sm text-[#5f6368] mt-2 leading-relaxed">
-                      {selectedLesson.description}
-                    </p>
-                  </div>
-
-                  {/* Visual Instructions Cards */}
-                  <div className="bg-[#f8f9fa] border border-[#dadce0] rounded-xl p-5 text-left space-y-2.5">
-                    <div className="text-xs font-semibold text-[#202124] flex items-center gap-1.5">
-                      <Lightbulb className="w-4 h-4 text-[#fbbc04]" />
-                      <span>Forming the Gesture Accurately:</span>
+                <div className="grid lg:grid-cols-2 gap-8 items-center">
+                  {/* Left: Animated Demonstration Player Card */}
+                  <div className="bg-[#1e2022] rounded-2xl p-6 text-white border border-[#3c4043] flex flex-col justify-between aspect-[4/3] shadow-inner relative overflow-hidden">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold tracking-wider uppercase text-[#8ab4f8]">
+                        Visual Demonstration
+                      </span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
+                        Level {selectedLevel.level}
+                      </span>
                     </div>
-                    {selectedLesson.tips.map((tip, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-[#5f6368]">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#34a853] flex-shrink-0 mt-0.5" />
-                        <span>{tip}</span>
+
+                    {/* Rich Visual Demonstration Vector & Key Landmarks */}
+                    <div className="my-auto flex flex-col items-center justify-center py-4 text-center">
+                      <div className="relative w-36 h-36 rounded-full bg-gradient-to-tr from-[#1a73e8]/20 to-[#4285f4]/30 border border-[#8ab4f8]/40 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/10">
+                        {/* Dynamic Vector Hand Illustration for specific sign */}
+                        <div className="text-center">
+                          <div className="text-5xl mb-1 filter drop-shadow">
+                            {selectedLevel.sign === "Hello" && "🖐️"}
+                            {selectedLevel.sign === "Thank You" && "✋"}
+                            {selectedLevel.sign === "Yes" && "✊"}
+                            {selectedLevel.sign === "No" && "✌️"}
+                            {selectedLevel.sign === "Please" && "👌"}
+                            {selectedLevel.sign === "Good" && "✌️"}
+                            {selectedLevel.sign === "Help" && "👍"}
+                            {selectedLevel.sign === "Sorry" && "🤙"}
+                          </div>
+                          <span className="text-[11px] font-mono font-semibold text-[#8ab4f8]">
+                            {selectedLevel.sign}
+                          </span>
+                        </div>
+
+                        {/* Animated motion pulse ring */}
+                        <div className="absolute inset-0 rounded-full border-2 border-[#8ab4f8] animate-ping opacity-20 pointer-events-none" />
                       </div>
-                    ))}
+
+                      <div className="text-xs text-gray-300 font-medium">
+                        Motion: <span className="text-white">{selectedLevel.handDiagram.motion}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3 border border-white/10 text-[11px] text-gray-300 flex items-center justify-between">
+                      <div>
+                        <span className="text-gray-400">Palm Direction: </span>
+                        <span className="text-white font-medium">{selectedLevel.handDiagram.palmDirection}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-gray-400">Posture: </span>
+                        <span className="text-white font-medium">{selectedLevel.handDiagram.extendedFingers}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Start Camera Test Button */}
-                  <div className="pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setStage("test")}
-                      className="w-full sm:w-auto px-8 py-3 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-sm font-medium rounded-xl shadow-md transition-colors inline-flex items-center justify-center gap-2"
-                    >
-                      <Camera className="w-4 h-4" /> Start Camera Practice Test
-                    </button>
+                  {/* Right: Step-by-Step Instructions & Start Button */}
+                  <div className="space-y-5">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#202124]">
+                        {selectedLevel.title}
+                      </h2>
+                      <p className="text-sm text-[#5f6368] mt-1.5 leading-relaxed">
+                        {selectedLevel.description}
+                      </p>
+                    </div>
+
+                    {/* Key Checklist Steps */}
+                    <div className="bg-[#f8f9fa] border border-[#dadce0] rounded-xl p-4 space-y-2.5">
+                      <div className="text-xs font-semibold text-[#202124] flex items-center gap-1.5">
+                        <Lightbulb className="w-4 h-4 text-[#fbbc04]" />
+                        <span>Posture Checklist:</span>
+                      </div>
+                      {selectedLevel.keySteps.map((step, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-xs text-[#5f6368]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#34a853] flex-shrink-0 mt-0.5" />
+                          <span>{step}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-3 bg-[#e8f0fe]/60 border border-[#d2e3fc] rounded-xl text-xs text-[#1a73e8]">
+                      <strong>Real-world usage:</strong> "{selectedLevel.sampleSentence}"
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setStage("test")}
+                        className="w-full sm:w-auto px-8 py-3 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-sm font-medium rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                      >
+                        <Camera className="w-4 h-4" /> Start Camera Practice Test
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Stage 2: Interactive Camera Test */}
+              {/* Stage 2: Interactive Camera Test (Decent Size Viewport) */}
               {stage === "test" && (
-                <div className="grid lg:grid-cols-2 gap-8 items-center">
-                  {/* Left: Camera Feed with Skeleton */}
-                  <div className="relative aspect-video bg-black rounded-2xl overflow-hidden shadow-inner border border-[#dadce0]">
+                <div className="max-w-xl mx-auto flex flex-col items-center space-y-6">
+                  {/* Clean Decent-Sized Camera Testing Viewport */}
+                  <div className="relative w-full max-w-md aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-lg border-2 border-[#1a73e8]/30">
                     <video
                       ref={videoRef}
                       className="w-full h-full object-cover -scale-x-100"
@@ -428,89 +587,79 @@ function LearnPage() {
                       className="absolute inset-0 w-full h-full object-cover pointer-events-none -scale-x-100"
                     />
 
-                    {/* Landmark toggle */}
-                    <button
-                      type="button"
-                      onClick={() => setShowWireframe(!showWireframe)}
-                      className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-lg backdrop-blur-sm transition-colors text-xs flex items-center gap-1"
-                    >
-                      {showWireframe ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                      <span>{showWireframe ? "Wireframe" : "Camera"}</span>
-                    </button>
+                    {/* Top Controls Overlay */}
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                      <span className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-white text-[11px] font-medium flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        Testing: {selectedLevel.sign}
+                      </span>
 
-                    {/* Live Match Bar overlay */}
-                    <div className="absolute bottom-3 left-3 right-3 bg-black/70 backdrop-blur-md rounded-xl p-3 text-white flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-semibold">Target: {selectedLesson.sign}</div>
-                        <div className="text-[11px] text-gray-300">
-                          {matchScore > 0.5 ? "Hold gesture steady!" : "Perform the sign to test"}
-                        </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowWireframe(!showWireframe)}
+                        className="p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-lg backdrop-blur-md transition-colors text-[11px] flex items-center gap-1"
+                      >
+                        {showWireframe ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        <span>{showWireframe ? "Skeleton" : "Camera"}</span>
+                      </button>
+                    </div>
+
+                    {/* Bottom Status Bar */}
+                    <div className="absolute bottom-3 left-3 right-3 bg-black/75 backdrop-blur-md rounded-xl p-3 text-white flex items-center justify-between">
+                      <div className="text-left">
+                        <div className="text-xs font-semibold text-white">{feedbackTip}</div>
+                        <div className="text-[10px] text-gray-400">Maintain posture for 1.2s to auto-advance</div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold font-mono text-[#34a853]">
+                      <div className="text-right pl-3">
+                        <div className="text-base font-bold font-mono text-emerald-400">
                           {Math.round(matchScore * 100)}%
-                        </span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right: Real-time Feedback & Hold Meter */}
-                  <div className="space-y-6">
-                    <div>
-                      <span className="text-xs font-semibold text-[#1a73e8] uppercase tracking-wider">
-                        Real-Time AI Evaluation
-                      </span>
-                      <h3 className="text-xl font-bold text-[#202124] mt-1">
-                        Show the "{selectedLesson.sign}" sign
-                      </h3>
-                      <p className="text-xs text-[#5f6368] mt-1">
-                        Hold your hand in front of the camera so MediaPipe can analyze your 21 hand joints.
-                      </p>
+                  {/* Hold Progress Bar */}
+                  <div className="w-full max-w-md space-y-2">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-[#202124]">Level Progress</span>
+                      <span className="text-[#1a73e8]">{holdProgress}%</span>
                     </div>
+                    <div className="h-3.5 w-full bg-[#e8eaed] rounded-full overflow-hidden p-0.5">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#1a73e8] to-[#34a853] rounded-full transition-all duration-200"
+                        style={{ width: `${holdProgress}%` }}
+                      />
+                    </div>
+                  </div>
 
-                    {/* Progress Fill Meter */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-[#202124]">Recognition Verification</span>
-                        <span className="text-[#1a73e8]">{holdProgress}%</span>
-                      </div>
-                      <div className="h-3 w-full bg-[#e8eaed] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[#34a853] transition-all duration-200"
-                          style={{ width: `${holdProgress}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-[#f8f9fa] border border-[#dadce0] rounded-xl text-xs space-y-2">
-                      <div className="font-semibold text-[#202124]">Sign Reference:</div>
-                      <p className="text-[#5f6368]">{SIGN_HINTS[selectedLesson.sign]}</p>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setStage("learn")}
-                        className="px-4 py-2 border border-[#dadce0] hover:bg-[#f1f3f4] text-[#3c4043] text-xs font-medium rounded-lg transition-colors"
-                      >
-                        Review Sign Guide
-                      </button>
-                    </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setStage("learn")}
+                      className="px-4 py-2 border border-[#dadce0] hover:bg-[#f1f3f4] text-[#3c4043] text-xs font-medium rounded-lg transition-colors"
+                    >
+                      &larr; Review Demonstration
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* Stage 3: Success Celebration Screen */}
-              {stage === "success" && (
+              {/* Stage 3: Auto-Advance Celebration Screen */}
+              {stage === "celebrate" && (
                 <div className="max-w-md mx-auto text-center space-y-6 py-6 animate-in">
-                  <div className="w-20 h-20 mx-auto rounded-full bg-[#ceead6] text-[#137333] flex items-center justify-center text-4xl shadow-md">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-[#ceead6] text-[#137333] flex items-center justify-center text-4xl shadow-md animate-bounce">
                     🎉
                   </div>
 
                   <div>
-                    <h2 className="text-2xl font-bold text-[#202124]">Sign Mastered!</h2>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#137333]">
+                      Level {selectedLevel.level} Cleared!
+                    </span>
+                    <h2 className="text-2xl font-bold text-[#202124] mt-1">
+                      {selectedLevel.sign} Mastered!
+                    </h2>
                     <p className="text-sm text-[#5f6368] mt-1">
-                      You successfully performed <strong>{selectedLesson.sign}</strong> with accurate hand orientation.
+                      Outstanding! Advancing you automatically to the next level...
                     </p>
                   </div>
 
@@ -525,81 +674,73 @@ function LearnPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedLesson(null)}
-                      className="flex-1 py-2.5 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-medium rounded-xl transition-colors shadow-sm"
-                    >
-                      Continue Path
-                    </button>
-                    <Link
-                      to="/leaderboard"
-                      className="flex-1 py-2.5 bg-white border border-[#dadce0] hover:bg-[#f1f3f4] text-[#3c4043] text-xs font-medium rounded-xl transition-colors text-center"
-                    >
-                      View Leaderboard
-                    </Link>
+                  <div className="text-xs text-[#1a73e8] font-medium animate-pulse">
+                    Auto-advancing to Level {selectedLevel.level < LEVELS.length ? selectedLevel.level + 1 : "Mastery"} in 1s...
                   </div>
                 </div>
               )}
             </div>
           ) : null}
 
-          {/* Curriculum Units (Duolingo Style Lessons) */}
-          <div className="space-y-8">
-            {[1, 2, 3].map((unitNumber) => {
-              const unitLessons = LESSONS.filter((l) => l.unit === unitNumber);
-              const unitTitle = unitLessons[0]?.unitTitle || `Unit ${unitNumber}`;
+          {/* Structured Level Roadmap (Duolingo-style progression) */}
+          <div className="bg-white border border-[#dadce0] rounded-2xl p-6 sm:p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#e8eaed]">
+              <div>
+                <h2 className="text-lg font-bold text-[#202124]">Level Progression Path</h2>
+                <p className="text-xs text-[#5f6368]">Master each sign level-by-level to complete your curriculum.</p>
+              </div>
+              <span className="text-xs font-semibold text-[#1a73e8]">
+                {completedSigns.length} / {LEVELS.length} Mastered
+              </span>
+            </div>
 
-              return (
-                <div key={unitNumber} className="bg-white border border-[#dadce0] rounded-2xl p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-4 border-b border-[#e8eaed] pb-3">
-                    <h2 className="text-base font-semibold text-[#202124]">{unitTitle}</h2>
-                    <span className="text-xs text-[#5f6368]">
-                      {unitLessons.filter((l) => completedSigns.includes(l.sign)).length} / {unitLessons.length} Completed
-                    </span>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {LEVELS.map((item) => {
+                const isMastered = completedSigns.includes(item.sign);
+                const isCurrent = selectedLevel?.level === item.level;
+
+                return (
+                  <div
+                    key={item.level}
+                    onClick={() => openLevel(item)}
+                    className={`group relative p-5 rounded-2xl border text-left cursor-pointer transition-all duration-200 ${
+                      isMastered
+                        ? "bg-[#e6f4ea]/40 border-[#ceead6] hover:border-[#34a853] hover:shadow-md"
+                        : "bg-white border-[#dadce0] hover:border-[#1a73e8] hover:shadow-md"
+                    } ${isCurrent ? "ring-2 ring-[#1a73e8]" : ""}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span
+                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                          isMastered ? "bg-[#ceead6] text-[#137333]" : "bg-[#f1f3f4] text-[#5f6368]"
+                        }`}
+                      >
+                        Level {item.level}
+                      </span>
+                      {isMastered ? (
+                        <CheckCircle2 className="w-4 h-4 text-[#34a853]" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 text-[#80868b] group-hover:text-[#1a73e8] transition-colors" />
+                      )}
+                    </div>
+
+                    <div className="text-base font-bold text-[#202124] group-hover:text-[#1a73e8] transition-colors">
+                      {item.sign}
+                    </div>
+                    <div className="text-xs text-[#5f6368] mt-1 line-clamp-2">
+                      {item.description}
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-[#f1f3f4] flex items-center justify-between text-[11px] text-[#80868b]">
+                      <span>{item.category}</span>
+                      <span className="text-[#1a73e8] font-medium flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                        {isMastered ? "Review" : "Start"} &rarr;
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {unitLessons.map((lesson) => {
-                      const isCompleted = completedSigns.includes(lesson.sign);
-
-                      return (
-                        <div
-                          key={lesson.sign}
-                          onClick={() => startLesson(lesson)}
-                          className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                            isCompleted
-                              ? "border-[#a8dab5] bg-[#ceead6]/20 hover:border-[#137333]"
-                              : "border-[#dadce0] bg-white hover:border-[#1a73e8] hover:shadow-md"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="text-3xl">{lesson.handIllustration}</div>
-                            {isCompleted ? (
-                              <span className="p-1 bg-[#ceead6] text-[#137333] rounded-full">
-                                <CheckCircle2 className="w-4 h-4" />
-                              </span>
-                            ) : (
-                              <span className="text-xs text-[#1a73e8] font-medium flex items-center gap-0.5">
-                                Start <ChevronRight className="w-3.5 h-3.5" />
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-3">
-                            <h3 className="font-semibold text-sm text-[#202124]">{lesson.sign}</h3>
-                            <p className="text-xs text-[#5f6368] mt-1 line-clamp-2">
-                              {lesson.description}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </main>
