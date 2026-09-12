@@ -19,10 +19,7 @@ function near(value: number, target: number, tolerance: number): number {
   return clamp01(1 - Math.abs(value - target) / tolerance);
 }
 
-function fingers(
-  f: HandFeatures,
-  want: [boolean, boolean, boolean, boolean, boolean],
-): number {
+function fingers(f: HandFeatures, want: [boolean, boolean, boolean, boolean, boolean]): number {
   let total = 0;
   for (let i = 0; i < 5; i += 1) {
     total += match(f.extension[i] ?? 0, want[i] ?? false);
@@ -39,8 +36,7 @@ const RULES: Rule[] = [
   },
   {
     label: "Thank You",
-    score: (f) =>
-      0.65 * fingers(f, [false, true, true, true, true]) + 0.35 * (1 - f.spread),
+    score: (f) => 0.65 * fingers(f, [false, true, true, true, true]) + 0.35 * (1 - f.spread),
   },
   {
     label: "Yes",
@@ -69,14 +65,13 @@ const RULES: Rule[] = [
   {
     label: "Please",
     score: (f) =>
-      0.6 * fingers(f, [true, true, true, true, true]) +
-      0.4 * near(f.thumbIndexGap, 0.1, 0.35),
+      0.6 * fingers(f, [true, true, true, true, true]) + 0.4 * near(f.thumbIndexGap, 0.1, 0.35),
   },
 ];
 
 /** Rules are ordered by the configured vocabulary so the UI stays in sync. */
-export const ACTIVE_RULES: Rule[] = SUPPORTED_SIGNS.map(
-  (label) => RULES.find((rule) => rule.label === label),
+export const ACTIVE_RULES: Rule[] = SUPPORTED_SIGNS.map((label) =>
+  RULES.find((rule) => rule.label === label),
 ).filter((rule): rule is Rule => Boolean(rule));
 
 export function classifyLandmarks(landmarks: readonly Landmark[]): Prediction | null {

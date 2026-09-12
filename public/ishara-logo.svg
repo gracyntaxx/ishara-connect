@@ -1,0 +1,6 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="60" rx="12" fill="#3B82F6"/>
+  <text x="100" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="700" fill="white" text-anchor="middle" letter-spacing="0.05em">Ishara</text>
+  <circle cx="175" cy="30" r="18" fill="#0D9488"/>
+  <path d="M175 22 L169 28 L173 32 L181 24" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -10,10 +10,7 @@ export type LandmarkerStatus = "idle" | "loading" | "ready" | "error";
  * Loaded lazily in the browser only — nothing here runs during SSR, and no
  * frame or landmark ever leaves the device.
  */
-export function useMediaPipe(
-  videoRef: React.RefObject<HTMLVideoElement | null>,
-  active: boolean,
-) {
+export function useMediaPipe(videoRef: React.RefObject<HTMLVideoElement | null>, active: boolean) {
   const [status, setStatus] = useState<LandmarkerStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [landmarks, setLandmarks] = useState<Landmark[] | null>(null);
@@ -29,8 +26,10 @@ export function useMediaPipe(
     let cancelled = false;
     let raf = 0;
     let lastFrameAt = 0;
-    let landmarker: { detectForVideo: (v: HTMLVideoElement, t: number) => { landmarks: Landmark[][] }; close: () => void } | null =
-      null;
+    let landmarker: {
+      detectForVideo: (v: HTMLVideoElement, t: number) => { landmarks: Landmark[][] };
+      close: () => void;
+    } | null = null;
 
     const frameInterval = 1000 / TARGET_FPS;
 

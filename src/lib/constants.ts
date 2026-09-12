@@ -64,7 +64,6 @@ export const GEMINI_THROTTLE_MS = 1500;
 export const GEMINI_ENABLED_BY_DEFAULT = false;
 
 /** MediaPipe Tasks Vision sources (loaded in the browser only). */
-export const MEDIAPIPE_WASM_URL =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
+export const MEDIAPIPE_WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
 export const HAND_LANDMARKER_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
