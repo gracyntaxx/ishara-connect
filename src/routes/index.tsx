@@ -4,11 +4,9 @@ import { Navbar, Footer } from "../components";
 import { APP_TAGLINE, SUPPORTED_SIGNS } from "../lib/constants";
 import { ArrowRight, Hand, MessageCircle, Shield, Zap, BookOpen, Trophy } from "lucide-react";
 
-export const Route = createFileRoute("/")(
-  {
-    component: Index,
-  },
-);
+export const Route = createFileRoute("/")({
+  component: Index,
+});
 
 function Index() {
   return (
@@ -127,19 +125,27 @@ function Index() {
                 <h3 className="text-lg font-medium text-[#202124] mb-3">Ishara changes that</h3>
                 <ul className="space-y-3 text-[#5f6368]">
                   <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">✓</span>
+                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
+                      ✓
+                    </span>
                     <span>Recognition runs entirely in your browser — zero cloud processing</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">✓</span>
+                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
+                      ✓
+                    </span>
                     <span>No downloads, no installation — works in any modern browser</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">✓</span>
+                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
+                      ✓
+                    </span>
                     <span>Video stays between you and your partner via peer-to-peer</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">✓</span>
+                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
+                      ✓
+                    </span>
                     <span>Practice mode helps you learn and improve at your own pace</span>
                   </li>
                 </ul>
@@ -163,10 +169,26 @@ function Index() {
               />
 
               {[
-                { n: "1", title: "Create a room", desc: "Generate a room code and share it with your conversation partner." },
-                { n: "2", title: "Allow camera", desc: "Grant camera and microphone access. All processing stays on your device." },
-                { n: "3", title: "Start signing", desc: "Sign naturally — recognised signs appear as text in real time." },
-                { n: "4", title: "Review & learn", desc: "Check the dialogue transcript or head to practice mode to improve." },
+                {
+                  n: "1",
+                  title: "Create a room",
+                  desc: "Generate a room code and share it with your conversation partner.",
+                },
+                {
+                  n: "2",
+                  title: "Allow camera",
+                  desc: "Grant camera and microphone access. All processing stays on your device.",
+                },
+                {
+                  n: "3",
+                  title: "Start signing",
+                  desc: "Sign naturally — recognised signs appear as text in real time.",
+                },
+                {
+                  n: "4",
+                  title: "Review & learn",
+                  desc: "Check the dialogue transcript or head to practice mode to improve.",
+                },
               ].map((step) => (
                 <div key={step.n} className="text-center relative">
                   <div className="mx-auto w-12 h-12 rounded-full bg-[#3b82f6] text-white flex items-center justify-center text-lg font-medium relative z-10">
@@ -233,7 +255,8 @@ function Index() {
               8 signs, recognised instantly
             </h2>
             <p className="text-[#5f6368] mb-8">
-              The local classifier supports these signs at launch. More can be added by editing one file.
+              The local classifier supports these signs at launch. More can be added by editing one
+              file.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               {SUPPORTED_SIGNS.map((sign) => (
@@ -299,8 +322,8 @@ function Index() {
               Ready to start?
             </h2>
             <p className="text-[#5f6368] mb-8 max-w-md mx-auto">
-              Create a room, share the code, and start communicating in seconds.
-              No installation, no account required.
+              Create a room, share the code, and start communicating in seconds. No installation, no
+              account required.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link

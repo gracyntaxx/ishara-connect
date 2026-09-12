@@ -57,14 +57,18 @@ export function Navbar() {
           <button
             onClick={toggleHighContrast}
             className={`hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
-              highContrast
-                ? "bg-[#0f172a] text-white"
-                : "text-[#5f6368] hover:bg-[#f1f3f4]"
+              highContrast ? "bg-[#0f172a] text-white" : "text-[#5f6368] hover:bg-[#f1f3f4]"
             }`}
             aria-label={highContrast ? "Disable high contrast" : "Enable high contrast"}
             title="High contrast"
           >
-            <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              className="h-[18px] w-[18px]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <circle cx="12" cy="12" r="10" />
               <path d="M12 18a6 6 0 0 0 0-12v12z" />
             </svg>

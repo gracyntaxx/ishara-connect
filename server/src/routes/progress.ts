@@ -52,7 +52,7 @@ progressRouter.post("/", async (req: Request, res: Response): Promise<void> => {
           mastered: Boolean(score && score >= 0.85),
         },
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     // Update user summary stats

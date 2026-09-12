@@ -64,7 +64,7 @@ function Room() {
         senderName: name,
         engine,
         gestures: callGestureMode,
-      })
+      }),
     );
     setGeneratedCode(connectionCode);
     setShowCode(true);
@@ -127,6 +127,12 @@ function Room() {
         gestures: callGestureMode ? "true" : "false",
       },
     });
+  };
+
+  const copyRoomId = async () => {
+    await navigator.clipboard.writeText(roomId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const copyShareLink = async () => {
@@ -200,7 +206,10 @@ function Room() {
               >
                 {/* Name Field */}
                 <div>
-                  <label htmlFor="name" className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
+                  <label
+                    htmlFor="name"
+                    className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5"
+                  >
                     Your Name
                   </label>
                   <div className="relative">
@@ -331,9 +340,25 @@ function Room() {
                   <div className="p-4 bg-[#e8f0fe]/50 border border-[#d2e3fc] rounded-xl space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-[#1a73e8] uppercase tracking-wider">
-                        Room Created: {roomId}
+                        Room Created!
                       </span>
-                      <span className="text-[11px] text-[#5f6368]">Ready to join</span>
+                      <span className="text-[11px] text-[#5f6368]">Share either option below</span>
+                    </div>
+
+                    {/* Plain Room ID — share this with your partner */}
+                    <div className="flex items-center gap-2 p-3 bg-white border border-[#dadce0] rounded-xl">
+                      <div className="flex-1">
+                        <p className="text-[10px] text-[#5f6368] uppercase tracking-wider font-semibold mb-0.5">Room ID (easiest to share)</p>
+                        <p className="text-2xl font-mono font-bold text-[#1a73e8] tracking-widest">{roomId}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={copyRoomId}
+                        className="p-2 bg-[#e8f0fe] hover:bg-[#d2e3fc] rounded-lg transition-colors flex items-center gap-1.5 text-[#1a73e8] text-xs font-medium"
+                      >
+                        {copied ? <Check className="w-3.5 h-3.5 text-[#34a853]" /> : <Copy className="w-3.5 h-3.5" />}
+                        Copy ID
+                      </button>
                     </div>
 
                     <div className="flex gap-2">
@@ -348,7 +373,7 @@ function Room() {
                           </>
                         ) : (
                           <>
-                            <Copy className="w-3.5 h-3.5 text-[#5f6368]" /> Copy Invite Link
+                            <Copy className="w-3.5 h-3.5 text-[#5f6368]" /> Copy Full Invite Link
                           </>
                         )}
                       </button>
@@ -384,7 +409,8 @@ function Room() {
               <div className="mt-4 p-3 bg-white border border-[#e8eaed] rounded-xl flex items-start gap-2.5 text-xs text-[#5f6368]">
                 <Shield className="w-4 h-4 text-[#34a853] flex-shrink-0 mt-0.5" />
                 <p>
-                  <strong>Private & Secure:</strong> All API credentials are git-ignored and never committed to public repositories.
+                  <strong>Private & Secure:</strong> All API credentials are git-ignored and never
+                  committed to public repositories.
                 </p>
               </div>
             </div>
@@ -401,9 +427,12 @@ function Room() {
                       <Zap className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-xs font-semibold text-[#202124]">ZEGOCLOUD 1-on-1 Calling</h3>
+                      <h3 className="text-xs font-semibold text-[#202124]">
+                        ZEGOCLOUD 1-on-1 Calling
+                      </h3>
                       <p className="text-xs text-[#5f6368] mt-0.5">
-                        Industry-standard HD audio and video with host controls, screen sharing, and in-call text chat.
+                        Industry-standard HD audio and video with host controls, screen sharing, and
+                        in-call text chat.
                       </p>
                     </div>
                   </div>
@@ -413,9 +442,12 @@ function Room() {
                       <Brain className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-xs font-semibold text-[#202124]">Client-Side Sign Recognition</h3>
+                      <h3 className="text-xs font-semibold text-[#202124]">
+                        Client-Side Sign Recognition
+                      </h3>
                       <p className="text-xs text-[#5f6368] mt-0.5">
-                        MediaPipe tracks 21 hand landmarks directly in your browser with zero video recording.
+                        MediaPipe tracks 21 hand landmarks directly in your browser with zero video
+                        recording.
                       </p>
                     </div>
                   </div>
@@ -425,9 +457,12 @@ function Room() {
                       <MessageSquare className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-xs font-semibold text-[#202124]">Two-Way Dialogue & Captions</h3>
+                      <h3 className="text-xs font-semibold text-[#202124]">
+                        Two-Way Dialogue & Captions
+                      </h3>
                       <p className="text-xs text-[#5f6368] mt-0.5">
-                        Sign language translations and speech-to-text live subtitles allow effortless conversation.
+                        Sign language translations and speech-to-text live subtitles allow
+                        effortless conversation.
                       </p>
                     </div>
                   </div>

@@ -220,7 +220,8 @@ function AwarenessPage() {
               Awareness & Community Hub
             </h1>
             <p className="text-sm text-[#5f6368] mt-1">
-              Practical tips for speaking people, facts about sign language, modern assistive inventions, and empathetic etiquette.
+              Practical tips for speaking people, facts about sign language, modern assistive
+              inventions, and empathetic etiquette.
             </p>
           </div>
 
@@ -270,7 +271,9 @@ function AwarenessPage() {
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${article.badgeColor}`}>
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${article.badgeColor}`}
+                    >
                       {article.categoryLabel}
                     </span>
                     <span className="text-[11px] text-[#5f6368]">{article.readTime}</span>
@@ -283,9 +286,7 @@ function AwarenessPage() {
                     </h2>
                   </div>
 
-                  <p className="text-xs text-[#5f6368] leading-relaxed mb-4">
-                    {article.summary}
-                  </p>
+                  <p className="text-xs text-[#5f6368] leading-relaxed mb-4">{article.summary}</p>
 
                   <div className="bg-[#f8f9fa] rounded-xl p-4 border border-[#e8eaed] space-y-2 mb-4">
                     <div className="text-xs font-semibold text-[#202124] flex items-center gap-1.5">
@@ -311,7 +312,9 @@ function AwarenessPage() {
                         : "text-[#5f6368] hover:bg-[#f1f3f4]"
                     }`}
                   >
-                    <Heart className={`w-3.5 h-3.5 ${userLiked[article.id] ? "fill-current" : ""}`} />
+                    <Heart
+                      className={`w-3.5 h-3.5 ${userLiked[article.id] ? "fill-current" : ""}`}
+                    />
                     <span>{likes[article.id]}</span>
                   </button>
 

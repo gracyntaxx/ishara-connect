@@ -20,7 +20,7 @@ export async function connectDatabase(): Promise<boolean> {
   } catch (error: any) {
     isConnected = false;
     console.warn(
-      `[Database] Notice: MongoDB connection unavailable (${error.message}). Running server in resilient mode.`
+      `[Database] Notice: MongoDB connection unavailable (${error.message}). Running server in resilient mode.`,
     );
     return false;
   }

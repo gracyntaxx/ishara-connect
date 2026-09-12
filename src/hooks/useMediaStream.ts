@@ -80,25 +80,19 @@ export function useMediaStream({ video = true, audio = true }: Options = {}) {
     setPermissionState("idle");
   }, []);
 
-  const toggleAudio = useCallback(
-    (enabled?: boolean) => {
-      const tracks = streamRef.current?.getAudioTracks();
-      tracks?.forEach((track) => {
-        track.enabled = enabled !== undefined ? enabled : !track.enabled;
-      });
-    },
-    [],
-  );
+  const toggleAudio = useCallback((enabled?: boolean) => {
+    const tracks = streamRef.current?.getAudioTracks();
+    tracks?.forEach((track) => {
+      track.enabled = enabled !== undefined ? enabled : !track.enabled;
+    });
+  }, []);
 
-  const toggleVideo = useCallback(
-    (enabled?: boolean) => {
-      const tracks = streamRef.current?.getVideoTracks();
-      tracks?.forEach((track) => {
-        track.enabled = enabled !== undefined ? enabled : !track.enabled;
-      });
-    },
-    [],
-  );
+  const toggleVideo = useCallback((enabled?: boolean) => {
+    const tracks = streamRef.current?.getVideoTracks();
+    tracks?.forEach((track) => {
+      track.enabled = enabled !== undefined ? enabled : !track.enabled;
+    });
+  }, []);
 
   const toggleTrack = useCallback(
     (kind: "audio" | "video", enabled: boolean) => {

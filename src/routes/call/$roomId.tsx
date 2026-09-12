@@ -34,7 +34,7 @@ function Call() {
   const initialGestures = search.gestures !== "false";
 
   const [activeEngine, setActiveEngine] = useState<"zego" | "p2p">(
-    search.engine === "p2p" ? "p2p" : "zego"
+    search.engine === "p2p" ? "p2p" : "zego",
   );
 
   return (

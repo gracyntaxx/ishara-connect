@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     res.end(
       `<!doctype html><html><head><title>Server Error</title></head><body><h1>Server Error</h1><p>${
         err?.message || "Internal Server Error"
-      }</p></body></html>`
+      }</p></body></html>`,
     );
   }
 }

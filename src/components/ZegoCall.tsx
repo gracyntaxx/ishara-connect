@@ -1,28 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  Shield,
-  Key,
   ArrowLeft,
   Sparkles,
   Hand,
-  Volume2,
   Mic,
   MicOff,
-  CheckCircle2,
   AlertTriangle,
-  ExternalLink,
   Eye,
   EyeOff,
-  MessageSquare,
-  Activity,
   Video,
   Send,
   Trash2,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
-import { SUPPORTED_SIGNS, SIGN_HINTS, SignLabel } from "../lib/constants";
+import type { SignLabel } from "../lib/constants";
 import { DialoguePanel } from "./DialoguePanel";
-import { useDialogueStore, type DialogueMessage } from "../stores/useDialogueStore";
+import { useDialogueStore } from "../stores/useDialogueStore";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useMediaStream } from "../hooks/useMediaStream";
 import { useMediaPipe } from "../hooks/useMediaPipe";
@@ -64,18 +59,34 @@ export function ZegoCall({
   const commitTimerRef = useRef<any>(null);
   const lastDetectedRef = useRef<{ sign: SignLabel; time: number } | null>(null);
 
-  const { addMessage, messages } = useDialogueStore();
+  // Relay connection status
+  const [relayStatus, setRelayStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
+  const seenMessageIds = useRef<Set<string>>(new Set());
+
+  const { addMessage, messages, clearMessages } = useDialogueStore();
   const { showHandLandmarks } = useSettingsStore();
+
+  // Clear messages when entering a new room so both users start fresh
+  useEffect(() => {
+    clearMessages();
+    seenMessageIds.current.clear();
+  }, [roomId, clearMessages]);
 
   // ZEGOCLOUD preconfigured credentials - auto-loaded silently in the background
   const DEFAULT_ZEGO_APP_ID = "830679237";
   const DEFAULT_ZEGO_SERVER_SECRET = "a7b1bc17853e307857204a6111b121c0";
 
-  const envAppId = (typeof import.meta !== "undefined" ? import.meta.env?.VITE_ZEGO_APP_ID : "") || DEFAULT_ZEGO_APP_ID;
-  const envServerSecret = (typeof import.meta !== "undefined" ? import.meta.env?.VITE_ZEGO_SERVER_SECRET : "") || DEFAULT_ZEGO_SERVER_SECRET;
+  const envAppId =
+    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_ZEGO_APP_ID : "") ||
+    DEFAULT_ZEGO_APP_ID;
+  const envServerSecret =
+    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_ZEGO_SERVER_SECRET : "") ||
+    DEFAULT_ZEGO_SERVER_SECRET;
 
   const [appId] = useState<string>(() => String(envAppId || DEFAULT_ZEGO_APP_ID));
-  const [serverSecret] = useState<string>(() => String(envServerSecret || DEFAULT_ZEGO_SERVER_SECRET));
+  const [serverSecret] = useState<string>(() =>
+    String(envServerSecret || DEFAULT_ZEGO_SERVER_SECRET),
+  );
   const isConfigured = true;
 
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +94,7 @@ export function ZegoCall({
 
   const localUserId = useRef<string>(
     sessionStorage.getItem("ishara_user_id") ||
-      `user_${Math.floor(100000 + Math.random() * 900000)}`
+      `user_${Math.floor(100000 + Math.random() * 900000)}`,
   ).current;
 
   // ─── Sentence Formation Rules ────────────────────────────────
@@ -113,21 +124,29 @@ export function ZegoCall({
     // Single sign expansions
     if (signs.length === 1) {
       switch (signs[0]) {
-        case "Hello": return "Hello! Nice to meet you.";
-        case "Thank You": return "Thank you very much.";
-        case "Yes": return "Yes, I agree.";
-        case "No": return "No, that is not correct.";
-        case "Help": return "I need assistance, please.";
-        case "Good": return "Everything is going good!";
-        case "Please": return "Please proceed.";
-        case "Sorry": return "I am sorry about that.";
+        case "Hello":
+          return "Hello! Nice to meet you.";
+        case "Thank You":
+          return "Thank you very much.";
+        case "Yes":
+          return "Yes, I agree.";
+        case "No":
+          return "No, that is not correct.";
+        case "Help":
+          return "I need assistance, please.";
+        case "Good":
+          return "Everything is going good!";
+        case "Please":
+          return "Please proceed.";
+        case "Sorry":
+          return "I am sorry about that.";
       }
     }
 
     return signs.join(" ") + ".";
   }, []);
 
-  // ─── Unified Cross-Client Broadcast (Supabase Realtime + ZEGOCLOUD) ───
+  // ─── Unified Cross-Client Broadcast (Supabase Realtime primary) ───
   const broadcastDialogueMessage = useCallback(
     (msg: {
       id: string;
@@ -139,10 +158,15 @@ export function ZegoCall({
       isFinal: boolean;
       timestamp: number;
     }) => {
-      // 1. Add locally
-      addMessage(msg);
+      // Skip if we already processed this message id (dedup guard)
+      if (seenMessageIds.current.has(msg.id)) return;
+      seenMessageIds.current.add(msg.id);
 
-      // 2. Broadcast across Supabase Realtime channel (10ms WebSocket delivery)
+      // 1. Add locally immediately
+      addMessage(msg);
+      console.log("[Relay] SEND", msg.type, msg.text, "→ room", roomId);
+
+      // 2. Broadcast via Supabase Realtime WebSocket
       if (broadcastChannelRef.current) {
         try {
           broadcastChannelRef.current.send({
@@ -151,20 +175,24 @@ export function ZegoCall({
             payload: msg,
           });
         } catch (e) {
-          console.warn("Supabase Realtime broadcast send error:", e);
+          console.warn("[Relay] Supabase send error:", e);
         }
       }
 
-      // 3. Fallback broadcast via ZEGOCLOUD in-room command WebRTC channel
+      // 3. Fallback: ZEGOCLOUD in-room command (sends to all users in room)
       if (zegoInstanceRef.current?.sendInRoomCommand) {
         try {
-          zegoInstanceRef.current.sendInRoomCommand(JSON.stringify(msg), []);
+          // Pass empty array to send to ALL users in the room
+          zegoInstanceRef.current.sendInRoomCommand(
+            JSON.stringify({ ...msg, _source: "zego" }),
+            [],
+          );
         } catch (e) {
-          console.warn("ZEGOCLOUD sendInRoomCommand fallback error:", e);
+          console.warn("[Relay] ZEGOCLOUD command error:", e);
         }
       }
     },
-    [addMessage]
+    [addMessage, roomId],
   );
 
   // ─── Parallel MediaPipe & Dual-Hand Recognition Pipeline ─────────
@@ -182,7 +210,13 @@ export function ZegoCall({
   }, [localCamStream, gestureMode]);
 
   // Track both hands simultaneously (numHands: 2)
-  const { landmarks, multiLandmarks, isRunning, start: startMediaPipe, stop: stopMediaPipe } = useMediaPipe({
+  const {
+    landmarks,
+    multiLandmarks,
+    isRunning,
+    start: startMediaPipe,
+    stop: stopMediaPipe,
+  } = useMediaPipe({
     videoRef: localVideoRef,
     numHands: 2,
   });
@@ -208,7 +242,15 @@ export function ZegoCall({
     setDraftTokens([]);
     setDraftSentence("");
     if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
-  }, [draftTokens, draftSentence, assembleSentence, broadcastDialogueMessage, currentConfidence, localName, localUserId]);
+  }, [
+    draftTokens,
+    draftSentence,
+    assembleSentence,
+    broadcastDialogueMessage,
+    currentConfidence,
+    localName,
+    localUserId,
+  ]);
 
   // Handle recognized sign gesture & assemble into full sentences
   const handleSignDetected = useCallback(
@@ -256,7 +298,7 @@ export function ZegoCall({
         return nextTokens;
       });
     },
-    [gestureMode, localName, localUserId, assembleSentence, broadcastDialogueMessage]
+    [gestureMode, localName, localUserId, assembleSentence, broadcastDialogueMessage],
   );
 
   // Local rule-based classifier evaluating both hands
@@ -297,7 +339,12 @@ export function ZegoCall({
     if (!callOverlayCanvasRef.current || !gestureMode || !showSkeleton) {
       if (callOverlayCanvasRef.current) {
         const ctx = callOverlayCanvasRef.current.getContext("2d");
-        ctx?.clearRect(0, 0, callOverlayCanvasRef.current.width, callOverlayCanvasRef.current.height);
+        ctx?.clearRect(
+          0,
+          0,
+          callOverlayCanvasRef.current.width,
+          callOverlayCanvasRef.current.height,
+        );
       }
       return;
     }
@@ -325,10 +372,10 @@ export function ZegoCall({
     }
   }, [gestureMode, isRunning, startMediaPipe, stopMediaPipe]);
 
-  // Speech-to-text recognition
+  // Speech-to-text recognition — works regardless of gesture mode
   const handleSpeechResult = useCallback(
     (transcript: string, isFinal: boolean) => {
-      if (!gestureMode || !isFinal || !transcript.trim()) return;
+      if (!isFinal || !transcript.trim()) return;
 
       const messageId = `speech_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       broadcastDialogueMessage({
@@ -341,25 +388,48 @@ export function ZegoCall({
         timestamp: Date.now(),
       });
     },
-    [gestureMode, localName, localUserId, broadcastDialogueMessage]
+    [localName, localUserId, broadcastDialogueMessage],
   );
 
-  const { isListening, start: startSpeech, stop: stopSpeech } = useSpeechRecognition({
+  const {
+    isListening,
+    start: startSpeech,
+    stop: stopSpeech,
+  } = useSpeechRecognition({
     onResult: handleSpeechResult,
     continuous: true,
   });
 
-  // ─── Setup Supabase Realtime Broadcast Channel ────────────────
+  // ─── Supabase Realtime Broadcast Channel with auto-reconnect ────
   useEffect(() => {
     const supabase = getSupabase();
-    if (!supabase || !roomId) return;
+    if (!supabase || !roomId) {
+      setRelayStatus("disconnected");
+      return;
+    }
 
-    const channel = supabase.channel(`call_room_${roomId}`, {
-      config: { broadcast: { self: false } },
-    });
+    let isMounted = true;
+    let reconnectTimer: any = null;
 
-    channel.on("broadcast", { event: "dialogue" }, ({ payload }) => {
-      if (payload && payload.senderId !== localUserId && payload.text) {
+    function setupChannel() {
+      if (!isMounted) return;
+      setRelayStatus("connecting");
+
+      const channel = supabase!.channel(`ishara_call_${roomId}`, {
+        config: {
+          broadcast: { self: false, ack: false },
+        },
+      });
+
+      // Listen for incoming dialogue messages from the remote peer
+      channel.on("broadcast", { event: "dialogue" }, ({ payload }) => {
+        if (!payload || !payload.text) return;
+        // Accept messages from anyone in the room (including echoed own messages from other devices)
+        if (payload.senderId === localUserId) return;
+        if (seenMessageIds.current.has(payload.id)) return;
+        seenMessageIds.current.add(payload.id);
+
+        console.log("[Relay] RECV", payload.type, payload.text, "from", payload.senderName);
         addMessage({
           id: payload.id,
           senderId: payload.senderId,
@@ -370,15 +440,38 @@ export function ZegoCall({
           isFinal: true,
           timestamp: payload.timestamp || Date.now(),
         });
-      }
-    });
+      });
 
-    channel.subscribe();
-    broadcastChannelRef.current = channel;
+      channel.subscribe((status) => {
+        console.log("[Relay] Channel status:", status, "room:", roomId);
+        if (!isMounted) return;
+        if (status === "SUBSCRIBED") {
+          setRelayStatus("connected");
+          broadcastChannelRef.current = channel;
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setRelayStatus("disconnected");
+          broadcastChannelRef.current = null;
+          // Auto-reconnect after 3 seconds
+          reconnectTimer = setTimeout(() => {
+            if (isMounted) {
+              console.log("[Relay] Reconnecting...");
+              supabase!.removeChannel(channel);
+              setupChannel();
+            }
+          }, 3000);
+        }
+      });
+
+      return channel;
+    }
+
+    const channel = setupChannel();
 
     return () => {
-      supabase.removeChannel(channel);
+      isMounted = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       broadcastChannelRef.current = null;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [roomId, localUserId, addMessage]);
 
@@ -414,7 +507,7 @@ export function ZegoCall({
           serverSecret.trim(),
           roomId,
           localUserId,
-          userName
+          userName,
         );
 
         const zp = ZegoUIKitPrebuilt.create(kitToken);
@@ -424,43 +517,45 @@ export function ZegoCall({
           container: containerRef.current,
           sharedLinks: [
             {
-              name: "1:1 Call Room Link",
-              url: `${window.location.origin}/call/${roomId}?name=Friend`,
+              name: "Share this link to join",
+              url: `${window.location.origin}/call/${roomId}?name=Guest&engine=zego&gestures=${gestureMode ? "true" : "false"}`,
             },
           ],
           scenario: {
-            mode: ZegoUIKitPrebuilt.OneONoneCall,
-            config: {
-              role: ZegoUIKitPrebuilt.Host,
-            },
+            // GroupCall allows multiple people to join the same room freely
+            mode: ZegoUIKitPrebuilt.GroupCall,
           },
           turnOnMicrophoneWhenJoining: true,
           turnOnCameraWhenJoining: true,
           showMyCameraToggleButton: true,
           showMyMicrophoneToggleButton: true,
           showAudioVideoSettingsButton: true,
-          showScreenSharingButton: true,
-          showTextChat: true,
+          showScreenSharingButton: false,
+          showTextChat: false,
           showUserList: true,
-          maxUsers: 2,
+          maxUsers: 4,
           layout: "Auto",
           showLayoutButton: false,
-          // Listen for in-room commands via WebRTC fallback
+          // Receive in-room commands from remote peer as a fallback channel
           onInRoomCommandReceived: (fromUser: any, command: string) => {
             try {
               const data = JSON.parse(command);
-              if (data && data.senderId !== localUserId && data.text) {
-                addMessage({
-                  id: data.id,
-                  senderId: data.senderId || fromUser?.userID || "remote",
-                  senderName: data.senderName || fromUser?.userName || "Remote Partner",
-                  type: data.type || "sign",
-                  text: data.text,
-                  confidence: data.confidence,
-                  isFinal: true,
-                  timestamp: data.timestamp || Date.now(),
-                });
-              }
+              // Ignore if it came back to us or has _source=zego and we sent it
+              if (!data || data.senderId === localUserId || !data.text) return;
+              if (seenMessageIds.current.has(data.id)) return;
+              seenMessageIds.current.add(data.id);
+
+              console.log("[Relay/ZEGO] RECV", data.type, data.text, "from", data.senderName);
+              addMessage({
+                id: data.id,
+                senderId: data.senderId || fromUser?.userID || "remote",
+                senderName: data.senderName || fromUser?.userName || "Remote Partner",
+                type: data.type || "sign",
+                text: data.text,
+                confidence: data.confidence,
+                isFinal: true,
+                timestamp: data.timestamp || Date.now(),
+              });
             } catch {
               // ignore non-json
             }
@@ -493,7 +588,7 @@ export function ZegoCall({
         zegoInstanceRef.current = null;
       }
     };
-  }, [isConfigured, appId, serverSecret, roomId, localName, localUserId, navigate, addMessage]);
+  }, [isConfigured, appId, serverSecret, roomId, localName, localUserId, navigate, addMessage, gestureMode]);
 
   // Most recent message for in-call subtitle banner
   const lastSubtitleMessage = messages.length > 0 ? messages[messages.length - 1] : null;
@@ -539,9 +634,7 @@ export function ZegoCall({
             type="button"
             onClick={() => setGestureMode(true)}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-              gestureMode
-                ? "bg-[#1a73e8] text-white shadow-sm"
-                : "text-[#9aa0a6] hover:text-white"
+              gestureMode ? "bg-[#1a73e8] text-white shadow-sm" : "text-[#9aa0a6] hover:text-white"
             }`}
           >
             <Hand className="w-3.5 h-3.5" />
@@ -551,9 +644,7 @@ export function ZegoCall({
             type="button"
             onClick={() => setGestureMode(false)}
             className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-              !gestureMode
-                ? "bg-[#3c4043] text-white shadow-sm"
-                : "text-[#9aa0a6] hover:text-white"
+              !gestureMode ? "bg-[#3c4043] text-white shadow-sm" : "text-[#9aa0a6] hover:text-white"
             }`}
           >
             <Video className="w-3.5 h-3.5" />
@@ -563,20 +654,40 @@ export function ZegoCall({
 
         {/* Right Tools */}
         <div className="flex items-center gap-2">
-          {gestureMode && (
-            <button
-              onClick={() => (isListening ? stopSpeech() : startSpeech())}
-              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-all ${
-                isListening
-                  ? "bg-[#ea4335] text-white animate-pulse"
-                  : "bg-[#2d2f31] text-[#e8eaed] hover:bg-[#3c4043]"
-              }`}
-              title="Speech-to-Text Subtitles"
-            >
-              {isListening ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{isListening ? "Subtitles Active" : "Start Subtitles"}</span>
-            </button>
-          )}
+          {/* Relay status indicator */}
+          <div
+            className={`flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-lg ${
+              relayStatus === "connected"
+                ? "text-emerald-400 bg-emerald-500/10"
+                : relayStatus === "connecting"
+                  ? "text-yellow-400 bg-yellow-500/10 animate-pulse"
+                  : "text-red-400 bg-red-500/10"
+            }`}
+            title={`Message relay: ${relayStatus}`}
+          >
+            {relayStatus === "connected" ? (
+              <Wifi className="w-3 h-3" />
+            ) : (
+              <WifiOff className="w-3 h-3" />
+            )}
+            <span className="hidden sm:inline capitalize">{relayStatus}</span>
+          </div>
+
+          {/* Speech toggle — works in both gesture and plain video mode */}
+          <button
+            onClick={() => (isListening ? stopSpeech() : startSpeech())}
+            className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg transition-all ${
+              isListening
+                ? "bg-[#ea4335] text-white animate-pulse"
+                : "bg-[#2d2f31] text-[#e8eaed] hover:bg-[#3c4043]"
+            }`}
+            title="Speech-to-Text Subtitles"
+          >
+            {isListening ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">
+              {isListening ? "Subtitles On" : "Subtitles Off"}
+            </span>
+          </button>
 
           {onSwitchToP2P && (
             <button
@@ -592,12 +703,10 @@ export function ZegoCall({
       {/* Main Call Viewport */}
       <div className="relative flex-1 flex overflow-hidden">
         {/* Left / Center Video Area (ZEGOCLOUD Container) */}
-        <div className={`relative flex-1 h-full overflow-hidden transition-all ${gestureMode ? "w-full lg:w-[65%]" : "w-full"}`}>
-          <div
-            ref={containerRef}
-            className="w-full h-full"
-            style={{ minHeight: "100%" }}
-          />
+        <div
+          className={`relative flex-1 h-full overflow-hidden transition-all ${gestureMode ? "w-full lg:w-[65%]" : "w-full"}`}
+        >
+          <div ref={containerRef} className="w-full h-full" style={{ minHeight: "100%" }} />
 
           {/* AR Dual-Hand Skeleton & Coordinates Canvas Overlay */}
           {gestureMode && showSkeleton && (
@@ -614,14 +723,18 @@ export function ZegoCall({
             <div className="absolute top-3 left-3 z-20 pointer-events-none flex flex-wrap gap-2 max-w-[90%]">
               {/* Hand 1 (Cyan) Telemetry Pill */}
               <div className="bg-black/80 backdrop-blur-md border border-cyan-500/50 rounded-lg px-2.5 py-1.5 flex items-center gap-2 shadow-lg">
-                <div className={`w-2 h-2 rounded-full ${h1 ? "bg-cyan-400 animate-pulse" : "bg-gray-500"}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${h1 ? "bg-cyan-400 animate-pulse" : "bg-gray-500"}`}
+                />
                 <div className="text-[10px] sm:text-[11px] font-mono">
                   <span className="text-cyan-400 font-bold">HAND 1: </span>
                   {h1 && h1Wrist ? (
                     <span className="text-gray-200">
-                      X:<span className="text-white font-semibold">{h1Wrist.x.toFixed(2)}</span>{" "}
-                      Y:<span className="text-white font-semibold">{h1Wrist.y.toFixed(2)}</span>{" "}
-                      Z:<span className="text-white font-semibold">{(h1Wrist.z ?? 0).toFixed(2)}</span>
+                      X:<span className="text-white font-semibold">{h1Wrist.x.toFixed(2)}</span> Y:
+                      <span className="text-white font-semibold">{h1Wrist.y.toFixed(2)}</span> Z:
+                      <span className="text-white font-semibold">
+                        {(h1Wrist.z ?? 0).toFixed(2)}
+                      </span>
                     </span>
                   ) : (
                     <span className="text-gray-400 italic">Ready (Show hand)</span>
@@ -631,14 +744,18 @@ export function ZegoCall({
 
               {/* Hand 2 (Purple) Telemetry Pill */}
               <div className="bg-black/80 backdrop-blur-md border border-purple-500/50 rounded-lg px-2.5 py-1.5 flex items-center gap-2 shadow-lg">
-                <div className={`w-2 h-2 rounded-full ${h2 ? "bg-purple-400 animate-pulse" : "bg-gray-500"}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${h2 ? "bg-purple-400 animate-pulse" : "bg-gray-500"}`}
+                />
                 <div className="text-[10px] sm:text-[11px] font-mono">
                   <span className="text-purple-400 font-bold">HAND 2: </span>
                   {h2 && h2Wrist ? (
                     <span className="text-gray-200">
-                      X:<span className="text-white font-semibold">{h2Wrist.x.toFixed(2)}</span>{" "}
-                      Y:<span className="text-white font-semibold">{h2Wrist.y.toFixed(2)}</span>{" "}
-                      Z:<span className="text-white font-semibold">{(h2Wrist.z ?? 0).toFixed(2)}</span>
+                      X:<span className="text-white font-semibold">{h2Wrist.x.toFixed(2)}</span> Y:
+                      <span className="text-white font-semibold">{h2Wrist.y.toFixed(2)}</span> Z:
+                      <span className="text-white font-semibold">
+                        {(h2Wrist.z ?? 0).toFixed(2)}
+                      </span>
                     </span>
                   ) : (
                     <span className="text-gray-400 italic">Ready (Show hand)</span>
@@ -651,7 +768,8 @@ export function ZegoCall({
                 <div className="bg-cyan-950/90 border border-cyan-400/60 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 shadow-lg animate-in fade-in">
                   <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-spin" />
                   <span className="text-[10px] sm:text-[11px] font-semibold text-cyan-200">
-                    Interpreted: <span className="text-white font-bold">{currentSign}</span> ({Math.round(currentConfidence * 100)}%)
+                    Interpreted: <span className="text-white font-bold">{currentSign}</span> (
+                    {Math.round(currentConfidence * 100)}%)
                   </span>
                 </div>
               )}
@@ -664,8 +782,13 @@ export function ZegoCall({
               <div className="bg-black/85 backdrop-blur-md border border-white/20 rounded-xl px-4 py-2.5 shadow-2xl text-center">
                 <div className="text-[10px] uppercase font-bold tracking-wider text-cyan-400 flex items-center justify-center gap-1.5">
                   <span>
-                    {lastSubtitleMessage.senderId === localUserId ? "You" : lastSubtitleMessage.senderName} •{" "}
-                    {lastSubtitleMessage.type === "sign" ? "ASL Gesture Translation" : "Speech Subtitle"}
+                    {lastSubtitleMessage.senderId === localUserId
+                      ? "You"
+                      : lastSubtitleMessage.senderName}{" "}
+                    •{" "}
+                    {lastSubtitleMessage.type === "sign"
+                      ? "ASL Gesture Translation"
+                      : "Speech Subtitle"}
                   </span>
                 </div>
                 <div className="text-sm sm:text-base font-semibold text-white mt-0.5">
@@ -698,7 +821,9 @@ export function ZegoCall({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-                  <span className="text-xs font-semibold text-white tracking-wide">Live Gesture AI (Dual Hands)</span>
+                  <span className="text-xs font-semibold text-white tracking-wide">
+                    Live Gesture AI (Dual Hands)
+                  </span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
                     2 Hands • 18 FPS
                   </span>
@@ -710,7 +835,11 @@ export function ZegoCall({
                     title="Toggle Skeleton Overlay"
                     className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
                   >
-                    {showSkeleton ? <Eye className="w-4 h-4 text-cyan-400" /> : <EyeOff className="w-4 h-4" />}
+                    {showSkeleton ? (
+                      <Eye className="w-4 h-4 text-cyan-400" />
+                    ) : (
+                      <EyeOff className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -781,9 +910,13 @@ export function ZegoCall({
 
                   <div className="text-xs text-white font-medium truncate mt-0.5">
                     {draftSentence ? (
-                      <span>"{draftSentence}" <span className="animate-pulse font-mono">|</span></span>
+                      <span>
+                        "{draftSentence}" <span className="animate-pulse font-mono">|</span>
+                      </span>
                     ) : (
-                      <span className="text-gray-400 italic">Sign gestures to form sentences...</span>
+                      <span className="text-gray-400 italic">
+                        Sign gestures to form sentences...
+                      </span>
                     )}
                   </div>
                 </div>

@@ -101,7 +101,13 @@ authRouter.get("/me", async (req: Request, res: Response): Promise<void> => {
 
     res.json({
       success: true,
-      data: { id: user._id, name: user.name, email: user.email, badges: user.badges, stats: user.stats },
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        badges: user.badges,
+        stats: user.stats,
+      },
     });
   } catch {
     res.status(401).json({ success: false, message: "Invalid or expired token" });

@@ -102,9 +102,11 @@ export function classifyMultiLandmarks(
   // Check compound two-handed ASL signs:
   if (feat1 && feat2) {
     // ASL 'Help': One hand thumbs-up, second hand flat supporting base
-    const h1ThumbsUp = feat1.extension[0] > 0.6 && feat1.extension[1] < 0.4 && feat1.extension[2] < 0.4;
+    const h1ThumbsUp =
+      feat1.extension[0] > 0.6 && feat1.extension[1] < 0.4 && feat1.extension[2] < 0.4;
     const h2Flat = feat2.extension[1] > 0.5 && feat2.extension[2] > 0.5 && feat2.extension[3] > 0.5;
-    const h2ThumbsUp = feat2.extension[0] > 0.6 && feat2.extension[1] < 0.4 && feat2.extension[2] < 0.4;
+    const h2ThumbsUp =
+      feat2.extension[0] > 0.6 && feat2.extension[1] < 0.4 && feat2.extension[2] < 0.4;
     const h1Flat = feat1.extension[1] > 0.5 && feat1.extension[2] > 0.5 && feat1.extension[3] > 0.5;
 
     if ((h1ThumbsUp && h2Flat) || (h2ThumbsUp && h1Flat)) {
@@ -144,4 +146,3 @@ export function classifyFeatures(features: HandFeatures): Prediction | null {
   }
   return best;
 }
-

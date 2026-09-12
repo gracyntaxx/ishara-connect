@@ -20,15 +20,23 @@ export function getSupabaseCredentials(): { url: string; key: string } {
     // store not ready yet
   }
 
-  const envUrl = (typeof import.meta !== "undefined" ? import.meta.env?.VITE_SUPABASE_URL : "") || "";
-  const envKey = (typeof import.meta !== "undefined" ? import.meta.env?.VITE_SUPABASE_ANON_KEY : "") || "";
+  const envUrl =
+    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_SUPABASE_URL : "") || "";
+  const envKey =
+    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_SUPABASE_ANON_KEY : "") || "";
 
   // Clean URL in case /rest/v1 or trailing slash was appended
-  let url = (storeUrl || envUrl || FALLBACK_SUPABASE_URL).trim().replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+  let url = (storeUrl || envUrl || FALLBACK_SUPABASE_URL)
+    .trim()
+    .replace(/\/rest\/v1\/?$/, "")
+    .replace(/\/$/, "");
   let key = (storeKey || envKey || FALLBACK_SUPABASE_KEY).trim();
 
   return { url, key };
 }
+
+// Direct client export for convenience
+export const supabase = getSupabase();
 
 export function getSupabase(): SupabaseClient | null {
   const { url, key } = getSupabaseCredentials();
@@ -215,7 +223,7 @@ export async function syncProgressToSupabase(
   userId: string,
   sign: string,
   score: number,
-  correct: boolean
+  correct: boolean,
 ) {
   const supabase = getSupabase();
   if (!supabase) return null;
@@ -272,11 +280,7 @@ export async function syncProgressToSupabase(
 }
 
 // Helper: Unlock and Save a Badge
-export async function unlockSupabaseBadge(
-  userId: string,
-  badgeKey: string,
-  badgeName: string
-) {
+export async function unlockSupabaseBadge(userId: string, badgeKey: string, badgeName: string) {
   const supabase = getSupabase();
   if (!supabase) return null;
 
@@ -290,7 +294,7 @@ export async function unlockSupabaseBadge(
           badge_name: badgeName,
           earned_at: new Date().toISOString(),
         },
-        { onConflict: "user_id,badge_key" }
+        { onConflict: "user_id,badge_key" },
       )
       .select()
       .single();
@@ -308,10 +312,7 @@ export async function getSupabaseBadges(userId: string) {
   if (!supabase) return [];
 
   try {
-    const { data } = await supabase
-      .from("badges")
-      .select("*")
-      .eq("user_id", userId);
+    const { data } = await supabase.from("badges").select("*").eq("user_id", userId);
 
     return data || [];
   } catch (e) {

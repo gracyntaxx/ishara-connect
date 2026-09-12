@@ -54,7 +54,11 @@ async function getSharedLandmarker(options: {
  * Runs the MediaPipe Hand Landmarker over a <video> element.
  * Supports dual-hand tracking (multiLandmarks: Landmark[][]) and single-hand (landmarks: Landmark[]).
  */
-export function useMediaPipe({ videoRef, targetFps, numHands: customNumHands }: UseMediaPipeOptions) {
+export function useMediaPipe({
+  videoRef,
+  targetFps,
+  numHands: customNumHands,
+}: UseMediaPipeOptions) {
   const {
     mediapipeDelegate,
     minDetectionConfidence,

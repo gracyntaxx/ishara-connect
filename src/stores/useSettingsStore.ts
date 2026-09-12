@@ -107,7 +107,9 @@ const initialState = {
   modelAssetUrl: HAND_LANDMARKER_MODEL_URL,
 
   // Database defaults
-  apiUrl: (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "http://localhost:5000",
+  apiUrl:
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+    "http://localhost:5000",
   databaseStatus: "unknown" as DatabaseStatus,
   databaseLatencyMs: null as number | null,
   supabaseUrl:

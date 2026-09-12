@@ -22,7 +22,7 @@ const ProgressSchema = new Schema<IProgress>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Compound index so each user has one record per sign

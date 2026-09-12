@@ -30,7 +30,7 @@ interface UseLocalClassifierOptions {
 export function useLocalClassifier({
   landmarks,
   multiLandmarks,
-  confidenceThreshold = 0.50,
+  confidenceThreshold = 0.5,
   smoothingWindow = SMOOTHING_WINDOW,
   minVotes = SMOOTHING_MIN_VOTES,
   emitCooldownMs = SIGN_EMIT_COOLDOWN_MS,
@@ -102,9 +102,7 @@ export function useLocalClassifier({
     idleFrames.current = 0;
 
     // Classify using dual-hand engine if available, or fallback to single
-    const raw = hasMulti
-      ? classifyMultiLandmarks(multiLandmarks!)
-      : classifyLandmarks(landmarks!);
+    const raw = hasMulti ? classifyMultiLandmarks(multiLandmarks!) : classifyLandmarks(landmarks!);
 
     if (!raw) return;
 

@@ -29,10 +29,7 @@ type ApiResponse<T> = {
   error?: { code: string; details?: unknown };
 };
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<ApiResponse<T> | null> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T> | null> {
   const token = useAuthStore.getState().token;
   const baseUrl = getBaseUrl();
   const headers: Record<string, string> = {
@@ -64,7 +61,14 @@ async function request<T>(
 
 import { getSupabase } from "./supabase";
 
-export async function apiRegister(name: string, email: string, password: string): Promise<ApiResponse<{ user: { id: string; name: string; email: string }; token: string }> | null> {
+export async function apiRegister(
+  name: string,
+  email: string,
+  password: string,
+): Promise<ApiResponse<{
+  user: { id: string; name: string; email: string };
+  token: string;
+}> | null> {
   const supabase = getSupabase();
   if (supabase) {
     try {
@@ -116,7 +120,13 @@ export async function apiRegister(name: string, email: string, password: string)
   );
 }
 
-export async function apiLogin(email: string, password: string): Promise<ApiResponse<{ user: { id: string; name: string; email: string }; token: string }> | null> {
+export async function apiLogin(
+  email: string,
+  password: string,
+): Promise<ApiResponse<{
+  user: { id: string; name: string; email: string };
+  token: string;
+}> | null> {
   const supabase = getSupabase();
   if (supabase) {
     try {
@@ -128,9 +138,11 @@ export async function apiLogin(email: string, password: string): Promise<ApiResp
       if (error) {
         let msg = error.message;
         if (msg.toLowerCase().includes("invalid login credentials")) {
-          msg = "Invalid email or password. If you don't have an account yet, click 'Register' above to create one!";
+          msg =
+            "Invalid email or password. If you don't have an account yet, click 'Register' above to create one!";
         } else if (msg.toLowerCase().includes("email not confirmed")) {
-          msg = "Your account is created! Supabase has sent a confirmation link to your inbox. Please click the link to activate your account, or disable 'Confirm email' in Supabase Auth Settings to log in immediately.";
+          msg =
+            "Your account is created! Supabase has sent a confirmation link to your inbox. Please click the link to activate your account, or disable 'Confirm email' in Supabase Auth Settings to log in immediately.";
         }
         return {
           success: false,
@@ -192,17 +204,17 @@ export async function apiGetMe() {
 // ─── Rooms ─────────────────────────────────────────────────
 
 export async function apiCreateRoom(displayName: string) {
-  return request<{ roomId: string; expiresAt: string }>(
-    "/api/rooms",
-    { method: "POST", body: JSON.stringify({ displayName }) },
-  );
+  return request<{ roomId: string; expiresAt: string }>("/api/rooms", {
+    method: "POST",
+    body: JSON.stringify({ displayName }),
+  });
 }
 
 export async function apiJoinRoom(roomId: string, displayName: string) {
-  return request<{ roomId: string; status: string }>(
-    `/api/rooms/${roomId}/join`,
-    { method: "POST", body: JSON.stringify({ displayName }) },
-  );
+  return request<{ roomId: string; status: string }>(`/api/rooms/${roomId}/join`, {
+    method: "POST",
+    body: JSON.stringify({ displayName }),
+  });
 }
 
 export async function apiGetRoom(roomId: string) {
@@ -226,10 +238,10 @@ export async function apiSaveProgress(sign: string, score: number, correct: bool
       // fallback
     }
   }
-  return request<{ sign: string; attempts: number; correctAttempts: number }>(
-    "/api/progress",
-    { method: "POST", body: JSON.stringify({ sign, score, correct }) },
-  );
+  return request<{ sign: string; attempts: number; correctAttempts: number }>("/api/progress", {
+    method: "POST",
+    body: JSON.stringify({ sign, score, correct }),
+  });
 }
 
 export async function apiGetProgress() {

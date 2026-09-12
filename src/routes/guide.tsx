@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { Navbar, Footer } from "../components";
 import { SUPPORTED_SIGNS, SIGN_HINTS } from "../lib/constants";
-import { ArrowRight, Camera, Hand, MessageCircle, Target, Monitor, Sun, Lightbulb } from "lucide-react";
+import {
+  ArrowRight,
+  Camera,
+  Hand,
+  MessageCircle,
+  Target,
+  Monitor,
+  Sun,
+  Lightbulb,
+} from "lucide-react";
 
 export const Route = createFileRoute("/guide")({
   component: GuidePage,
@@ -14,7 +23,7 @@ function GuidePage() {
       n: 1,
       icon: Monitor,
       title: "Create or join a room",
-      desc: "Head to the Start Call page. Click \"Create Room\" to generate a unique room code, or paste a code you received from someone else to join their room.",
+      desc: 'Head to the Start Call page. Click "Create Room" to generate a unique room code, or paste a code you received from someone else to join their room.',
       tip: "Room codes are 6 characters long and expire after 2 hours.",
     },
     {
@@ -43,7 +52,7 @@ function GuidePage() {
       icon: Target,
       title: "Practice to improve",
       desc: "Visit Practice Mode to train on individual signs. Select a target sign, hold the pose, and get instant feedback with confidence scores. Track your streak, accuracy, and session stats.",
-      tip: "Start with \"Hello\" (open palm) — it's the easiest sign to recognise reliably.",
+      tip: 'Start with "Hello" (open palm) — it\'s the easiest sign to recognise reliably.',
     },
   ];
 
@@ -98,7 +107,8 @@ function GuidePage() {
               Supported signs reference
             </h2>
             <p className="text-center text-[#5f6368] mb-10">
-              These 8 signs are recognised by the local classifier. Hold the hand pose steady for 1–2 seconds.
+              These 8 signs are recognised by the local classifier. Hold the hand pose steady for
+              1–2 seconds.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-4">
@@ -142,7 +152,7 @@ function GuidePage() {
                 {
                   icon: Hand,
                   title: "Clear hand pose",
-                  desc: "Spread your fingers clearly for signs like \"Hello\". Avoid overlapping fingers when not needed.",
+                  desc: 'Spread your fingers clearly for signs like "Hello". Avoid overlapping fingers when not needed.',
                 },
                 {
                   icon: Monitor,

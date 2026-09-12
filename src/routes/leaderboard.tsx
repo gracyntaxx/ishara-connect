@@ -70,9 +70,7 @@ function Leaderboard() {
                 <Database className="w-5 h-5" />
               </div>
               <div>
-                <div className="text-xs font-semibold text-[#202124]">
-                  Cloud Verified Rankings
-                </div>
+                <div className="text-xs font-semibold text-[#202124]">Cloud Verified Rankings</div>
                 <div className="text-[11px] text-[#5f6368]">
                   Practice scores and badges are synced with Supabase PostgreSQL in real time.
                 </div>
@@ -86,7 +84,9 @@ function Leaderboard() {
           {/* Your Current Stats Highlight */}
           <div className="bg-[#1a73e8] text-white rounded-2xl p-6 mb-8 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <span className="text-xs uppercase tracking-wider text-blue-100 font-semibold">Your Standing</span>
+              <span className="text-xs uppercase tracking-wider text-blue-100 font-semibold">
+                Your Standing
+              </span>
               <h2 className="text-xl font-bold mt-0.5">Keep Practicing to Climb</h2>
             </div>
             <div className="flex gap-6 text-center">
@@ -124,10 +124,10 @@ function Leaderboard() {
                         entry.rank === 1
                           ? "bg-[#fbbc04] text-white shadow-sm"
                           : entry.rank === 2
-                          ? "bg-[#dadce0] text-[#202124]"
-                          : entry.rank === 3
-                          ? "bg-[#d27d2d] text-white"
-                          : "text-[#5f6368]"
+                            ? "bg-[#dadce0] text-[#202124]"
+                            : entry.rank === 3
+                              ? "bg-[#d27d2d] text-white"
+                              : "text-[#5f6368]"
                       }`}
                     >
                       {entry.rank}
