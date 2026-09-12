@@ -1,12 +1,11 @@
 {
+  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "vite",
   "functions": {
-    "dist/server/server.js": {
-      "maxDuration": 30
+    "api/index.js": {
+      "maxDuration": 30,
+      "includeFiles": "dist/server/**"
     }
   },
   "rewrites": [
@@ -16,7 +15,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/server/server.js"
+      "destination": "/api/index"
     }
   ],
   "headers": [
