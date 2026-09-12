@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar, Footer } from "../components";
 import { useSettingsStore, applyTheme, initTheme } from "../stores";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Sun,
   Moon,
@@ -18,7 +18,20 @@ import {
   EyeOff,
   Check,
   AlertTriangle,
+  Cpu,
+  Database,
+  RefreshCw,
+  Server,
+  ShieldCheck,
+  Sliders,
+  Sparkles,
+  Layers,
+  Activity,
+  Copy,
 } from "lucide-react";
+import { apiHealthCheck } from "../lib/api";
+import { testSupabaseConnection, SUPABASE_SQL_SCHEMA } from "../lib/supabase";
+import { HAND_LANDMARKER_MODEL_URL } from "../lib/constants";
 
 export const Route = createFileRoute("/settings")({
   component: Settings,
@@ -42,6 +55,21 @@ function Settings() {
     showHandLandmarks,
     signEmitCooldownMs,
     targetFps,
+
+    // MediaPipe Model Settings
+    mediapipeDelegate,
+    minDetectionConfidence,
+    minTrackingConfidence,
+    numHands,
+    modelAssetUrl,
+
+    // Database Settings
+    apiUrl,
+    databaseStatus,
+    databaseLatencyMs,
+    supabaseUrl,
+    supabaseAnonKey,
+
     setTheme,
     setHighContrast,
     setReducedMotion,
@@ -58,10 +86,30 @@ function Settings() {
     setShowHandLandmarks,
     setSignEmitCooldownMs,
     setTargetFps,
+
+    setMediapipeDelegate,
+    setMinDetectionConfidence,
+    setMinTrackingConfidence,
+    setNumHands,
+    setModelAssetUrl,
+
+    setApiUrl,
+    setDatabaseStatus,
+    setSupabaseUrl,
+    setSupabaseAnonKey,
+    reset,
   } = useSettingsStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showAnonKey, setShowAnonKey] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [testingDb, setTestingDb] = useState(false);
+  const [dbTestMessage, setDbTestMessage] = useState<string | null>(null);
+  const [tempApiUrl, setTempApiUrl] = useState(apiUrl);
+  const [tempSupabaseUrl, setTempSupabaseUrl] = useState(supabaseUrl);
+  const [tempSupabaseKey, setTempSupabaseKey] = useState(supabaseAnonKey);
+  const [savedNotice, setSavedNotice] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
 
   useEffect(() => {
     initTheme();
@@ -72,468 +120,719 @@ function Settings() {
   }, [theme, highContrast]);
 
   useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then((d) => setDevices(d));
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then((d) => setDevices(d));
+    }
   }, []);
+
+  // Run initial lightweight DB health check (prefer Supabase if credentials configured)
+  useEffect(() => {
+    let active = true;
+    if (supabaseUrl && supabaseAnonKey) {
+      testSupabaseConnection().then((res) => {
+        if (!active) return;
+        if (res.success) {
+          setDatabaseStatus("connected", res.latencyMs);
+        } else {
+          setDatabaseStatus("disconnected", null);
+        }
+      });
+    } else {
+      apiHealthCheck().then((res) => {
+        if (!active) return;
+        if (res.success) {
+          setDatabaseStatus("connected", res.latencyMs);
+        } else {
+          setDatabaseStatus("disconnected", null);
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [supabaseUrl, supabaseAnonKey, apiUrl, setDatabaseStatus]);
+
+  const handleTestSupabase = async () => {
+    setTestingDb(true);
+    setDbTestMessage(null);
+    setDatabaseStatus("checking");
+
+    try {
+      const res = await testSupabaseConnection();
+      if (res.success) {
+        setDatabaseStatus("connected", res.latencyMs);
+        setDbTestMessage(res.message);
+      } else {
+        setDatabaseStatus("disconnected", null);
+        setDbTestMessage(res.message);
+      }
+    } catch {
+      setDatabaseStatus("disconnected", null);
+      setDbTestMessage("Failed to reach Supabase project.");
+    } finally {
+      setTestingDb(false);
+    }
+  };
+
+  const handleSaveSupabase = () => {
+    setSupabaseUrl(tempSupabaseUrl.trim());
+    setSupabaseAnonKey(tempSupabaseKey.trim());
+    setSavedNotice(true);
+    setTimeout(() => setSavedNotice(false), 2000);
+    handleTestSupabase();
+  };
+
+  const handleCopySql = async () => {
+    await navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 2500);
+  };
+
+  const handleTestDatabase = async () => {
+    setTestingDb(true);
+    setDbTestMessage(null);
+    setDatabaseStatus("checking");
+
+    try {
+      const res = await apiHealthCheck();
+      if (res.success) {
+        setDatabaseStatus("connected", res.latencyMs);
+        setDbTestMessage(`Connected to Ishara Backend API (${res.latencyMs}ms)`);
+      } else {
+        setDatabaseStatus("disconnected", null);
+        setDbTestMessage("Backend server is offline. Ishara is running in local-only mode.");
+      }
+    } catch {
+      setDatabaseStatus("disconnected", null);
+      setDbTestMessage("Failed to reach backend endpoint.");
+    } finally {
+      setTestingDb(false);
+    }
+  };
+
+  const handleSaveApiUrl = () => {
+    setApiUrl(tempApiUrl.trim());
+    setSavedNotice(true);
+    setTimeout(() => setSavedNotice(false), 2000);
+    handleTestDatabase();
+  };
 
   const videoDevices = devices.filter((d) => d.kind === "videoinput");
   const audioInputDevices = devices.filter((d) => d.kind === "audioinput");
   const audioOutputDevices = devices.filter((d) => d.kind === "audiooutput");
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
       <Navbar />
-      <main className="flex-1 py-12 px-4">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-10">
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Settings</h1>
-            <p className="text-muted-foreground">Customize your Ishara Connect experience</p>
+
+      <main className="flex-1 py-10 px-4">
+        <div className="mx-auto max-w-4xl">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f0fe] text-[#1a73e8] text-xs font-medium mb-2">
+              <Sliders className="w-3.5 h-3.5" />
+              <span>System & Model Preferences</span>
+            </div>
+            <h1 className="text-3xl font-normal text-[#202124] tracking-tight">Settings</h1>
+            <p className="text-sm text-[#5f6368] mt-1">
+              Configure MediaPipe AI vision models, MongoDB database connection, media devices, and accessibility.
+            </p>
           </div>
 
-          <div className="space-y-8">
-            <section className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                <Contrast className="h-5 w-5" />
-                Appearance
-              </h2>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-3">Theme</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: "light", label: "Light", icon: Sun },
-                      { value: "dark", label: "Dark", icon: Moon },
-                      { value: "system", label: "System", icon: Monitor },
-                    ].map(({ value, label, icon: Icon }) => (
-                      <button
-                        key={value}
-                        onClick={() => setTheme(value as "light" | "dark" | "system")}
-                        className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
-                          theme === value
-                            ? "border-primary bg-primary/5 text-primary"
-                            : "border-border hover:border-primary/50 text-muted-foreground"
-                        }`}
-                      >
-                        <Icon className="h-5 w-5" />
-                        <span className="text-sm font-medium">{label}</span>
-                      </button>
-                    ))}
+          <div className="space-y-6">
+            {/* 1. MediaPipe AI Vision Model Section */}
+            <section className="bg-white border border-[#dadce0] rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center">
+                    <Brain className="w-5 h-5" />
                   </div>
-                </div>
-
-                <div className="pt-6 border-t border-border">
-                  <label className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Contrast className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-foreground">High Contrast Mode</p>
-                        <p className="text-sm text-muted-foreground">
-                          Maximum contrast for better visibility
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setHighContrast(!highContrast)}
-                      className={`relative w-12 h-6 rounded-full transition-colors ${
-                        highContrast ? "bg-primary" : "bg-muted"
-                      }`}
-                      role="switch"
-                      aria-checked={highContrast}
-                    >
-                      <span
-                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                          highContrast ? "translate-x-6" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </label>
-                </div>
-
-                <div className="pt-6 border-t border-border">
-                  <label className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Move className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-foreground">Reduced Motion</p>
-                        <p className="text-sm text-muted-foreground">
-                          Minimize animations and transitions
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setReducedMotion(!reducedMotion)}
-                      className={`relative w-12 h-6 rounded-full transition-colors ${
-                        reducedMotion ? "bg-primary" : "bg-muted"
-                      }`}
-                      role="switch"
-                      aria-checked={reducedMotion}
-                    >
-                      <span
-                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                          reducedMotion ? "translate-x-6" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </label>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Language & Region
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="language"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Interface Language
-                  </label>
-                  <select
-                    id="language"
-                    value={language}
-                    onChange={(e) =>
-                      setLanguage(e.target.value as "en" | "es" | "fr" | "de" | "hi" | "zh")
-                    }
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  >
-                    <option value="en">English</option>
-                    <option value="es">Español</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                    <option value="hi">हिन्दी</option>
-                    <option value="zh">中文</option>
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="speechLanguage"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Speech Recognition Language
-                  </label>
-                  <select
-                    id="speechLanguage"
-                    value={speechRecognitionLanguage}
-                    onChange={(e) => setSpeechRecognitionLanguage(e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  >
-                    <option value="en-US">English (US)</option>
-                    <option value="en-GB">English (UK)</option>
-                    <option value="es-ES">Español (España)</option>
-                    <option value="fr-FR">Français (France)</option>
-                    <option value="de-DE">Deutsch (Deutschland)</option>
-                    <option value="hi-IN">हिन्दी (भारत)</option>
-                    <option value="zh-CN">中文 (中国)</option>
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                <Video className="h-5 w-5" />
-                Camera & Microphone
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="camera"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Camera
-                  </label>
-                  <select
-                    id="camera"
-                    value={cameraDeviceId || ""}
-                    onChange={(e) => setCameraDeviceId(e.target.value || null)}
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  >
-                    <option value="">Default</option>
-                    {videoDevices.map((d) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Camera ${d.deviceId.slice(0, 8)}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="microphone"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Microphone
-                  </label>
-                  <select
-                    id="microphone"
-                    value={microphoneDeviceId || ""}
-                    onChange={(e) => setMicrophoneDeviceId(e.target.value || null)}
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  >
-                    <option value="">Default</option>
-                    {audioInputDevices.map((d) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Microphone ${d.deviceId.slice(0, 8)}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="speaker"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    Speaker
-                  </label>
-                  <select
-                    id="speaker"
-                    value={speakerDeviceId || ""}
-                    onChange={(e) => setSpeakerDeviceId(e.target.value || null)}
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  >
-                    <option value="">Default</option>
-                    {audioOutputDevices.map((d) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Speaker ${d.deviceId.slice(0, 8)}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                Recognition
-              </h2>
-              <div className="space-y-4">
-                <label className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Brain className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-foreground">Local Sign Classifier</p>
-                      <p className="text-sm text-muted-foreground">
-                        Enable client-side sign recognition (8 signs)
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setEnableLocalClassifier(!enableLocalClassifier)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      enableLocalClassifier ? "bg-primary" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={enableLocalClassifier}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                        enableLocalClassifier ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                <label className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Mic className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-foreground">Speech Recognition</p>
-                      <p className="text-sm text-muted-foreground">
-                        Convert spoken words to text in real-time
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setEnableSpeechRecognition(!enableSpeechRecognition)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      enableSpeechRecognition ? "bg-primary" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={enableSpeechRecognition}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                        enableSpeechRecognition ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                <label className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Brain className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-foreground">Gemini AI Fallback</p>
-                      <p className="text-sm text-muted-foreground">
-                        Use Google Gemini for improved recognition (requires API key)
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setEnableGeminiFallback(!enableGeminiFallback)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      enableGeminiFallback ? "bg-primary" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={enableGeminiFallback}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                        enableGeminiFallback ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
-                </label>
-
-                {enableGeminiFallback && (
-                  <div className="pt-2">
-                    <label
-                      htmlFor="geminiKey"
-                      className="block text-sm font-medium text-foreground mb-2"
-                    >
-                      Gemini API Key
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="geminiKey"
-                        type={showApiKey ? "text" : "password"}
-                        value={geminiApiKey || ""}
-                        onChange={(e) => setGeminiApiKey(e.target.value || null)}
-                        placeholder="Enter your Gemini API key"
-                        className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showApiKey ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Get your API key from{" "}
-                      <a
-                        href="https://makersuite.google.com/app/apikey"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline"
-                      >
-                        Google AI Studio
-                      </a>
+                  <div>
+                    <h2 className="text-base font-semibold text-[#202124]">
+                      MediaPipe Vision Model
+                    </h2>
+                    <p className="text-xs text-[#5f6368]">
+                      On-device hand landmark detection parameters and hardware acceleration
                     </p>
                   </div>
-                )}
+                </div>
+                <span className="text-[11px] font-semibold bg-[#ceead6] text-[#137333] px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Client-Side AI
+                </span>
+              </div>
 
-                <div className="grid sm:grid-cols-2 gap-4 pt-4 border-t border-border">
-                  <div>
-                    <label
-                      htmlFor="confidence"
-                      className="block text-sm font-medium text-foreground mb-2"
-                    >
-                      Show Confidence Scores
-                    </label>
+              <div className="space-y-5 pt-2">
+                {/* Hardware Delegate (GPU vs CPU) */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-2">
+                    Execution Delegate (Hardware Acceleration)
+                  </label>
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <button
-                      onClick={() => setShowConfidenceScores(!showConfidenceScores)}
-                      className={`relative w-12 h-6 rounded-full transition-colors ${
-                        showConfidenceScores ? "bg-primary" : "bg-muted"
+                      type="button"
+                      onClick={() => setMediapipeDelegate("GPU")}
+                      className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                        mediapipeDelegate === "GPU"
+                          ? "border-[#1a73e8] bg-[#e8f0fe]/50 text-[#1a73e8]"
+                          : "border-[#dadce0] bg-white text-[#5f6368] hover:border-[#bdc1c6]"
                       }`}
-                      role="switch"
-                      aria-checked={showConfidenceScores}
                     >
-                      <span
-                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                          showConfidenceScores ? "translate-x-6" : "translate-x-0"
-                        }`}
-                      />
+                      <Sparkles className="w-5 h-5 text-[#1a73e8] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="font-semibold text-xs text-[#202124]">GPU WebGL (Recommended)</div>
+                        <div className="text-[11px] text-[#5f6368] mt-0.5">
+                          High FPS, low CPU utilization using hardware graphics shaders
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMediapipeDelegate("CPU")}
+                      className={`p-3.5 rounded-xl border text-left flex items-start gap-3 transition-all ${
+                        mediapipeDelegate === "CPU"
+                          ? "border-[#1a73e8] bg-[#e8f0fe]/50 text-[#1a73e8]"
+                          : "border-[#dadce0] bg-white text-[#5f6368] hover:border-[#bdc1c6]"
+                      }`}
+                    >
+                      <Cpu className="w-5 h-5 text-[#ea4335] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <div className="font-semibold text-xs text-[#202124]">CPU (Fallback)</div>
+                        <div className="text-[11px] text-[#5f6368] mt-0.5">
+                          Software emulation for devices without WebGL acceleration
+                        </div>
+                      </div>
                     </button>
                   </div>
-                  <div>
-                    <label
-                      htmlFor="landmarks"
-                      className="block text-sm font-medium text-foreground mb-2"
-                    >
-                      Show Hand Landmarks
+                </div>
+
+                {/* Hand Detection Confidence & Tracking Confidence Sliders */}
+                <div className="grid sm:grid-cols-2 gap-5 pt-2">
+                  <div className="bg-[#f8f9fa] p-4 rounded-xl border border-[#dadce0]">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-semibold text-[#3c4043]">
+                        Min Detection Confidence
+                      </label>
+                      <span className="text-xs font-mono font-medium text-[#1a73e8] bg-white px-2 py-0.5 rounded border border-[#dadce0]">
+                        {Math.round(minDetectionConfidence * 100)}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="0.9"
+                      step="0.05"
+                      value={minDetectionConfidence}
+                      onChange={(e) => setMinDetectionConfidence(parseFloat(e.target.value))}
+                      className="w-full accent-[#1a73e8] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-[#5f6368] mt-1.5">
+                      Threshold to confirm hand presence before tracking begins
+                    </p>
+                  </div>
+
+                  <div className="bg-[#f8f9fa] p-4 rounded-xl border border-[#dadce0]">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-semibold text-[#3c4043]">
+                        Min Tracking Confidence
+                      </label>
+                      <span className="text-xs font-mono font-medium text-[#1a73e8] bg-white px-2 py-0.5 rounded border border-[#dadce0]">
+                        {Math.round(minTrackingConfidence * 100)}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="0.9"
+                      step="0.05"
+                      value={minTrackingConfidence}
+                      onChange={(e) => setMinTrackingConfidence(parseFloat(e.target.value))}
+                      className="w-full accent-[#1a73e8] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-[#5f6368] mt-1.5">
+                      Threshold to retain landmark points between continuous frames
+                    </p>
+                  </div>
+                </div>
+
+                {/* Hands count & Target FPS */}
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div className="bg-[#f8f9fa] p-4 rounded-xl border border-[#dadce0]">
+                    <label className="block text-xs font-semibold text-[#3c4043] mb-2">
+                      Max Hands Tracked
                     </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNumHands(1)}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition-colors ${
+                          numHands === 1
+                            ? "bg-white border-[#1a73e8] text-[#1a73e8] shadow-sm"
+                            : "border-[#dadce0] bg-[#f1f3f4] text-[#5f6368]"
+                        }`}
+                      >
+                        1 Hand (Optimal)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNumHands(2)}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition-colors ${
+                          numHands === 2
+                            ? "bg-white border-[#1a73e8] text-[#1a73e8] shadow-sm"
+                            : "border-[#dadce0] bg-[#f1f3f4] text-[#5f6368]"
+                        }`}
+                      >
+                        2 Hands (Bimanual)
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[#5f6368] mt-2">
+                      Single hand provides lowest latency for one-handed static gestures.
+                    </p>
+                  </div>
+
+                  <div className="bg-[#f8f9fa] p-4 rounded-xl border border-[#dadce0]">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-semibold text-[#3c4043]">Target FPS</label>
+                      <span className="text-xs font-mono font-medium text-[#1a73e8] bg-white px-2 py-0.5 rounded border border-[#dadce0]">
+                        {targetFps} FPS
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="30"
+                      step="2"
+                      value={targetFps}
+                      onChange={(e) => setTargetFps(Number(e.target.value))}
+                      className="w-full accent-[#1a73e8] cursor-pointer"
+                    />
+                    <p className="text-[11px] text-[#5f6368] mt-1.5">
+                      Detection loop speed (18 FPS balances fluidity with minimal battery drain)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Model Asset URL input */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
+                    MediaPipe Hand Landmarker Model Asset
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={modelAssetUrl}
+                      onChange={(e) => setModelAssetUrl(e.target.value)}
+                      className="flex-1 px-3.5 py-2 bg-white border border-[#dadce0] rounded-xl text-xs font-mono text-[#202124] focus:outline-none focus:border-[#1a73e8]"
+                      placeholder="https://.../hand_landmarker.task"
+                    />
                     <button
+                      type="button"
+                      onClick={() => setModelAssetUrl(HAND_LANDMARKER_MODEL_URL)}
+                      className="px-3 py-2 text-xs font-medium text-[#1a73e8] bg-[#e8f0fe] hover:bg-[#d2e3fc] rounded-xl transition-colors"
+                    >
+                      Reset Default
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-[#70757a] mt-1">
+                    Default: Google Storage official float16 MediaPipe bundle.
+                  </p>
+                </div>
+
+                {/* Visualizer and Classifier Toggles */}
+                <div className="pt-3 border-t border-[#e8eaed] space-y-3">
+                  <label className="flex items-center justify-between cursor-pointer py-1">
+                    <div>
+                      <div className="text-xs font-semibold text-[#202124]">
+                        Show 21-Point Landmark Skeleton
+                      </div>
+                      <div className="text-[11px] text-[#5f6368]">
+                        Render colored joints and connections over your camera feed
+                      </div>
+                    </div>
+                    <button
+                      type="button"
                       onClick={() => setShowHandLandmarks(!showHandLandmarks)}
-                      className={`relative w-12 h-6 rounded-full transition-colors ${
-                        showHandLandmarks ? "bg-primary" : "bg-muted"
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        showHandLandmarks ? "bg-[#1a73e8]" : "bg-[#dadce0]"
                       }`}
                       role="switch"
                       aria-checked={showHandLandmarks}
                     >
                       <span
                         className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                          showHandLandmarks ? "translate-x-6" : "translate-x-0"
+                          showHandLandmarks ? "translate-x-5" : "translate-x-0"
                         }`}
                       />
                     </button>
-                  </div>
+                  </label>
+
+                  <label className="flex items-center justify-between cursor-pointer py-1">
+                    <div>
+                      <div className="text-xs font-semibold text-[#202124]">
+                        Confidence Score Indicators
+                      </div>
+                      <div className="text-[11px] text-[#5f6368]">
+                        Display live % match on recognized sign gestures
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowConfidenceScores(!showConfidenceScores)}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${
+                        showConfidenceScores ? "bg-[#1a73e8]" : "bg-[#dadce0]"
+                      }`}
+                      role="switch"
+                      aria-checked={showConfidenceScores}
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                          showConfidenceScores ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </label>
                 </div>
               </div>
             </section>
 
-            <section className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Advanced
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="cooldown"
-                    className="block text-sm font-medium text-foreground mb-2"
+            {/* 2. Database & Cloud Storage Section (Supabase) */}
+            <section className="bg-white border border-[#dadce0] rounded-2xl p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#ceead6] text-[#137333] flex items-center justify-center flex-shrink-0">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-[#202124]">
+                      Database & Cloud Storage (Supabase)
+                    </h2>
+                    <p className="text-xs text-[#5f6368]">
+                      PostgreSQL database for practice progress, user profiles, badges, and call history
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                  {databaseStatus === "connected" ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-[#ceead6] text-[#137333] px-3 py-1 rounded-full">
+                      <span className="w-2 h-2 rounded-full bg-[#137333] animate-pulse" />
+                      Database Online {databaseLatencyMs ? `(${databaseLatencyMs}ms)` : ""}
+                    </span>
+                  ) : databaseStatus === "checking" ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-[#feefe3] text-[#b06000] px-3 py-1 rounded-full">
+                      <RefreshCw className="w-3 h-3 animate-spin" /> Testing...
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-[#f1f3f4] text-[#5f6368] px-3 py-1 rounded-full">
+                      <span className="w-2 h-2 rounded-full bg-[#9aa0a6]" />
+                      Local Storage Mode (Offline)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <div className="bg-[#f8f9fa] border border-[#dadce0] rounded-xl p-4 text-xs text-[#3c4043] space-y-2">
+                  <div className="flex items-center gap-2 font-medium text-[#202124]">
+                    <ShieldCheck className="w-4 h-4 text-[#137333]" />
+                    <span>Supabase-Ready & Git-Protected</span>
+                  </div>
+                  <p className="text-[#5f6368] leading-relaxed">
+                    Credentials are read directly from <code>.env</code> (ignored in <code>.gitignore</code> so keys
+                    are never exposed to GitHub). You can also configure or update them below.
+                  </p>
+                </div>
+
+                {/* Supabase URL & Anon Key */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
+                      Supabase Project URL
+                    </label>
+                    <input
+                      type="text"
+                      value={tempSupabaseUrl}
+                      onChange={(e) => setTempSupabaseUrl(e.target.value)}
+                      placeholder="https://xyzcompany.supabase.co"
+                      className="w-full px-3.5 py-2 bg-white border border-[#dadce0] rounded-xl text-xs font-mono text-[#202124] focus:outline-none focus:border-[#1a73e8]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
+                      Supabase Anon Public Key
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showAnonKey ? "text" : "password"}
+                        value={tempSupabaseKey}
+                        onChange={(e) => setTempSupabaseKey(e.target.value)}
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        className="w-full px-3.5 py-2 pr-10 bg-white border border-[#dadce0] rounded-xl text-xs font-mono text-[#202124] focus:outline-none focus:border-[#1a73e8]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAnonKey(!showAnonKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5f6368] hover:text-[#202124]"
+                      >
+                        {showAnonKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions: Save Supabase, Ping, Copy SQL */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleSaveSupabase}
+                      className="px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-medium rounded-xl transition-colors shadow-sm"
+                    >
+                      {savedNotice ? "Saved!" : "Save Credentials"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleTestSupabase}
+                      disabled={testingDb}
+                      className="px-4 py-2 bg-white border border-[#dadce0] hover:bg-[#f1f3f4] text-[#3c4043] text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${testingDb ? "animate-spin" : ""}`} />
+                      Ping Supabase
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopySql}
+                      className="px-4 py-2 bg-white border border-[#dadce0] hover:bg-[#f1f3f4] text-[#3c4043] text-xs font-medium rounded-xl transition-colors flex items-center gap-1.5"
+                    >
+                      {copiedSql ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-[#137333]" /> SQL Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-[#5f6368]" /> Copy SQL Schema
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Optional Backend API URL */}
+                <div className="pt-4 border-t border-[#e8eaed]">
+                  <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
+                    Optional Express API Server URL
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tempApiUrl}
+                      onChange={(e) => setTempApiUrl(e.target.value)}
+                      placeholder="http://localhost:5000"
+                      className="flex-1 px-3.5 py-2 bg-white border border-[#dadce0] rounded-xl text-xs font-mono text-[#202124] focus:outline-none focus:border-[#1a73e8]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveApiUrl}
+                      className="px-4 py-2 bg-white border border-[#dadce0] hover:bg-[#f1f3f4] text-[#3c4043] text-xs font-medium rounded-xl transition-colors"
+                    >
+                      Save API URL
+                    </button>
+                  </div>
+                </div>
+
+                {/* Test Feedback */}
+                {dbTestMessage && (
+                  <div
+                    className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                      databaseStatus === "connected"
+                        ? "bg-[#ceead6]/60 text-[#137333] border border-[#a8dab5]"
+                        : "bg-[#feefe3] text-[#b06000] border border-[#fddfc4]"
+                    }`}
                   >
-                    Sign Emit Cooldown (ms)
-                  </label>
-                  <input
-                    id="cooldown"
-                    type="number"
-                    value={signEmitCooldownMs}
-                    onChange={(e) => setSignEmitCooldownMs(Number(e.target.value))}
-                    min="500"
-                    max="5000"
-                    step="100"
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Minimum time between duplicate sign emissions
-                  </p>
-                </div>
+                    <Activity className="w-4 h-4 flex-shrink-0" />
+                    <span>{dbTestMessage}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* 3. Audio & Speech Recognition Section */}
+            <section className="bg-white border border-[#dadce0] rounded-2xl p-6 shadow-sm">
+              <h2 className="text-base font-semibold text-[#202124] mb-4 flex items-center gap-2">
+                <Mic className="w-5 h-5 text-[#1a73e8]" />
+                Speech & Audio
+              </h2>
+
+              <div className="space-y-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="text-xs font-semibold text-[#202124]">Live Speech-to-Text</div>
+                    <div className="text-[11px] text-[#5f6368]">
+                      Transcribe non-signing participant speech into real-time subtitles
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnableSpeechRecognition(!enableSpeechRecognition)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      enableSpeechRecognition ? "bg-[#1a73e8]" : "bg-[#dadce0]"
+                    }`}
+                    role="switch"
+                    aria-checked={enableSpeechRecognition}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        enableSpeechRecognition ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </label>
+
                 <div>
-                  <label htmlFor="fps" className="block text-sm font-medium text-foreground mb-2">
-                    Target FPS
+                  <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
+                    Speech Recognition Language
                   </label>
-                  <input
-                    id="fps"
-                    type="number"
-                    value={targetFps}
-                    onChange={(e) => setTargetFps(Number(e.target.value))}
-                    min="10"
-                    max="30"
-                    step="1"
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Detection loop frame rate (higher = more responsive, more CPU)
-                  </p>
+                  <select
+                    value={speechRecognitionLanguage}
+                    onChange={(e) => setSpeechRecognitionLanguage(e.target.value)}
+                    className="w-full sm:w-64 px-3 py-2 bg-white border border-[#dadce0] rounded-xl text-xs text-[#202124] focus:outline-none focus:border-[#1a73e8]"
+                  >
+                    <option value="en-US">English (US)</option>
+                    <option value="en-IN">English (India)</option>
+                    <option value="hi-IN">Hindi (India)</option>
+                    <option value="es-ES">Spanish</option>
+                    <option value="fr-FR">French</option>
+                  </select>
                 </div>
+              </div>
+            </section>
+
+            {/* 4. Gemini AI Fallback Section */}
+            <section className="bg-white border border-[#dadce0] rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-[#ea4335]" />
+                  <h2 className="text-base font-semibold text-[#202124]">Gemini AI Fallback</h2>
+                </div>
+                <span className="text-[11px] text-[#5f6368]">Optional Cloud Classifier</span>
+              </div>
+
+              <div className="space-y-4">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="text-xs font-semibold text-[#202124]">Enable Gemini AI Assistant</div>
+                    <div className="text-[11px] text-[#5f6368]">
+                      Use multimodal Gemini when local confidence falls below threshold
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEnableGeminiFallback(!enableGeminiFallback)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      enableGeminiFallback ? "bg-[#1a73e8]" : "bg-[#dadce0]"
+                    }`}
+                    role="switch"
+                    aria-checked={enableGeminiFallback}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        enableGeminiFallback ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </label>
+
+                {enableGeminiFallback && (
+                  <div>
+                    <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
+                      Gemini API Key
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showApiKey ? "text" : "password"}
+                        value={geminiApiKey || ""}
+                        onChange={(e) => setGeminiApiKey(e.target.value || null)}
+                        placeholder="AIzaSy..."
+                        className="w-full px-3.5 py-2 pr-10 bg-white border border-[#dadce0] rounded-xl text-xs font-mono text-[#202124] focus:outline-none focus:border-[#1a73e8]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#5f6368] hover:text-[#202124]"
+                      >
+                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[#70757a] mt-1">
+                      Stored in your browser localStorage, never sent to third-party servers.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* 5. Appearance & Accessibility */}
+            <section className="bg-white border border-[#dadce0] rounded-2xl p-6 shadow-sm">
+              <h2 className="text-base font-semibold text-[#202124] mb-4 flex items-center gap-2">
+                <Contrast className="w-5 h-5 text-[#1a73e8]" />
+                Appearance & Accessibility
+              </h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-2">
+                    Theme
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["light", "dark", "system"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTheme(t)}
+                        className={`py-2 px-3 rounded-xl border text-xs font-medium capitalize transition-colors ${
+                          theme === t
+                            ? "bg-[#e8f0fe] border-[#1a73e8] text-[#1a73e8]"
+                            : "border-[#dadce0] bg-white text-[#5f6368] hover:border-[#bdc1c6]"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="flex items-center justify-between cursor-pointer py-1">
+                  <div>
+                    <div className="text-xs font-semibold text-[#202124]">High Contrast Mode</div>
+                    <div className="text-[11px] text-[#5f6368]">
+                      Enhance edge contrast and text sharpness for maximum readability
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHighContrast(!highContrast)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      highContrast ? "bg-[#1a73e8]" : "bg-[#dadce0]"
+                    }`}
+                    role="switch"
+                    aria-checked={highContrast}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                        highContrast ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </label>
               </div>
             </section>
           </div>
         </div>
       </main>
+
       <Footer />
     </div>
   );
 }
-
-function useState(initial: boolean) {
-  const [state, setState] = React.useState(initial);
-  return [state, setState] as const;
-}
-
-import React from "react";

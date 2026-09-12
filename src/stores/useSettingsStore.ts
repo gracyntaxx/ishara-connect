@@ -1,19 +1,29 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { HAND_LANDMARKER_MODEL_URL } from "@/lib/constants";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type Language = "en" | "es" | "fr" | "de" | "hi" | "zh";
+export type MediaPipeDelegate = "GPU" | "CPU";
+export type DatabaseStatus = "unknown" | "connected" | "disconnected" | "checking";
 
 export interface SettingsState {
+  // Appearance & Accessibility
   theme: ThemeMode;
   highContrast: boolean;
   reducedMotion: boolean;
   language: Language;
+
+  // Media Devices
   cameraDeviceId: string | null;
   microphoneDeviceId: string | null;
   speakerDeviceId: string | null;
+
+  // Audio / Speech Recognition
   enableSpeechRecognition: boolean;
   speechRecognitionLanguage: string;
+
+  // AI & Recognition
   enableLocalClassifier: boolean;
   enableGeminiFallback: boolean;
   geminiApiKey: string | null;
@@ -22,6 +32,21 @@ export interface SettingsState {
   signEmitCooldownMs: number;
   targetFps: number;
 
+  // MediaPipe Model Settings
+  mediapipeDelegate: MediaPipeDelegate;
+  minDetectionConfidence: number;
+  minTrackingConfidence: number;
+  numHands: number;
+  modelAssetUrl: string;
+
+  // Database / Backend Connection Settings
+  apiUrl: string;
+  databaseStatus: DatabaseStatus;
+  databaseLatencyMs: number | null;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+
+  // Actions
   setTheme: (theme: ThemeMode) => void;
   setHighContrast: (enabled: boolean) => void;
   toggleHighContrast: () => void;
@@ -39,6 +64,20 @@ export interface SettingsState {
   setShowHandLandmarks: (show: boolean) => void;
   setSignEmitCooldownMs: (ms: number) => void;
   setTargetFps: (fps: number) => void;
+
+  // MediaPipe Actions
+  setMediapipeDelegate: (delegate: MediaPipeDelegate) => void;
+  setMinDetectionConfidence: (confidence: number) => void;
+  setMinTrackingConfidence: (confidence: number) => void;
+  setNumHands: (num: number) => void;
+  setModelAssetUrl: (url: string) => void;
+
+  // Database Actions
+  setApiUrl: (url: string) => void;
+  setDatabaseStatus: (status: DatabaseStatus, latency?: number | null) => void;
+  setSupabaseUrl: (url: string) => void;
+  setSupabaseAnonKey: (key: string) => void;
+
   reset: () => void;
 }
 
@@ -59,6 +98,20 @@ const initialState = {
   showHandLandmarks: false,
   signEmitCooldownMs: 1600,
   targetFps: 18,
+
+  // MediaPipe model defaults
+  mediapipeDelegate: "GPU" as MediaPipeDelegate,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5,
+  numHands: 1,
+  modelAssetUrl: HAND_LANDMARKER_MODEL_URL,
+
+  // Database defaults
+  apiUrl: (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "http://localhost:5000",
+  databaseStatus: "unknown" as DatabaseStatus,
+  databaseLatencyMs: null as number | null,
+  supabaseUrl: (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) || "",
+  supabaseAnonKey: (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) || "",
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -83,6 +136,19 @@ export const useSettingsStore = create<SettingsState>()(
       setShowHandLandmarks: (show) => set({ showHandLandmarks: show }),
       setSignEmitCooldownMs: (ms) => set({ signEmitCooldownMs: ms }),
       setTargetFps: (fps) => set({ targetFps: fps }),
+
+      setMediapipeDelegate: (delegate) => set({ mediapipeDelegate: delegate }),
+      setMinDetectionConfidence: (confidence) => set({ minDetectionConfidence: confidence }),
+      setMinTrackingConfidence: (confidence) => set({ minTrackingConfidence: confidence }),
+      setNumHands: (num) => set({ numHands: num }),
+      setModelAssetUrl: (url) => set({ modelAssetUrl: url }),
+
+      setApiUrl: (url) => set({ apiUrl: url }),
+      setDatabaseStatus: (status, latency = null) =>
+        set({ databaseStatus: status, databaseLatencyMs: latency }),
+      setSupabaseUrl: (url) => set({ supabaseUrl: url }),
+      setSupabaseAnonKey: (key) => set({ supabaseAnonKey: key }),
+
       reset: () => set(initialState),
     }),
     {
@@ -92,83 +158,8 @@ export const useSettingsStore = create<SettingsState>()(
   ),
 );
 
-export function useSettingsActions() {
-  const {
-    theme,
-    highContrast,
-    reducedMotion,
-    language,
-    cameraDeviceId,
-    microphoneDeviceId,
-    speakerDeviceId,
-    enableSpeechRecognition,
-    speechRecognitionLanguage,
-    enableLocalClassifier,
-    enableGeminiFallback,
-    geminiApiKey,
-    showConfidenceScores,
-    showHandLandmarks,
-    signEmitCooldownMs,
-    targetFps,
-    setTheme,
-    setHighContrast,
-    toggleHighContrast,
-    setReducedMotion,
-    setLanguage,
-    setCameraDeviceId,
-    setMicrophoneDeviceId,
-    setSpeakerDeviceId,
-    setEnableSpeechRecognition,
-    setSpeechRecognitionLanguage,
-    setEnableLocalClassifier,
-    setEnableGeminiFallback,
-    setGeminiApiKey,
-    setShowConfidenceScores,
-    setShowHandLandmarks,
-    setSignEmitCooldownMs,
-    setTargetFps,
-    reset,
-  } = useSettingsStore();
-
-  return {
-    theme,
-    highContrast,
-    reducedMotion,
-    language,
-    cameraDeviceId,
-    microphoneDeviceId,
-    speakerDeviceId,
-    enableSpeechRecognition,
-    speechRecognitionLanguage,
-    enableLocalClassifier,
-    enableGeminiFallback,
-    geminiApiKey,
-    showConfidenceScores,
-    showHandLandmarks,
-    signEmitCooldownMs,
-    targetFps,
-    setTheme,
-    setHighContrast,
-    toggleHighContrast,
-    setReducedMotion,
-    setLanguage,
-    setCameraDeviceId,
-    setMicrophoneDeviceId,
-    setSpeakerDeviceId,
-    setEnableSpeechRecognition,
-    setSpeechRecognitionLanguage,
-    setEnableLocalClassifier,
-    setEnableGeminiFallback,
-    setGeminiApiKey,
-    setShowConfidenceScores,
-    setShowHandLandmarks,
-    setSignEmitCooldownMs,
-    setTargetFps,
-    reset,
-  };
-}
-
 export function applyTheme(theme: ThemeMode, highContrast: boolean) {
+  if (typeof document === "undefined") return;
   const root = document.documentElement;
 
   if (highContrast) {
@@ -188,6 +179,7 @@ export function applyTheme(theme: ThemeMode, highContrast: boolean) {
 }
 
 export function initTheme() {
+  if (typeof window === "undefined") return;
   const stored = localStorage.getItem("ishara-settings-store");
   if (stored) {
     try {
@@ -200,19 +192,17 @@ export function initTheme() {
     applyTheme("system", false);
   }
 
-  if (typeof window !== "undefined") {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-      const stored = localStorage.getItem("ishara-settings-store");
-      if (stored) {
-        try {
-          const { state } = JSON.parse(stored);
-          if (state.theme === "system") {
-            applyTheme("system", state.highContrast);
-          }
-        } catch {
-          // ignore
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    const freshStored = localStorage.getItem("ishara-settings-store");
+    if (freshStored) {
+      try {
+        const { state } = JSON.parse(freshStored);
+        if (state.theme === "system") {
+          applyTheme("system", state.highContrast);
         }
+      } catch {
+        // ignore
       }
-    });
-  }
+    }
+  });
 }

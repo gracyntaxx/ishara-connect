@@ -1,18 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Navbar, Footer } from "../components";
 import {
-  Mail,
-  Lock,
   User,
-  Eye,
-  EyeOff,
-  Loader2,
   Video,
   Brain,
   MessageSquare,
   AlertCircle,
+  Sparkles,
+  Shield,
+  Copy,
+  Check,
+  ArrowRight,
+  Radio,
+  Zap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/room")({
@@ -20,18 +21,19 @@ export const Route = createFileRoute("/room")({
 });
 
 function Room() {
-  const search = useSearch({ from: "/room" });
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"create" | "join">("create");
+  const [engine, setEngine] = useState<"zego" | "p2p">("zego");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [roomId, setRoomId] = useState("");
-  const [joinCode, setJoinCode] = useState("");
+  const [joinInput, setJoinInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [generatedCode, setGeneratedCode] = useState("");
   const [showCode, setShowCode] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const [callGestureMode, setCallGestureMode] = useState(true);
 
   const generateRoomId = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -42,14 +44,12 @@ function Room() {
     return result;
   };
 
-  const handleCreateRoom = async (e: React.FormEvent) => {
+  const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
 
     if (!name.trim()) {
       setError("Please enter your name");
-      setIsLoading(false);
       return;
     }
 
@@ -61,257 +61,372 @@ function Room() {
         roomId: newRoomId,
         type: "offer-placeholder",
         senderName: name,
-      }),
+        engine,
+        gestures: callGestureMode,
+      })
     );
     setGeneratedCode(connectionCode);
     setShowCode(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
   };
 
-  const handleJoinRoom = async (e: React.FormEvent) => {
+  const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setIsLoading(true);
 
     if (!name.trim()) {
       setError("Please enter your name");
-      setIsLoading(false);
       return;
     }
 
-    if (!joinCode.trim()) {
-      setError("Please enter a connection code");
-      setIsLoading(false);
+    const cleanInput = joinInput.trim();
+    if (!cleanInput) {
+      setError("Please enter a Room ID or connection code");
       return;
     }
 
+    let targetRoomId = cleanInput;
+    let targetCode = cleanInput;
+
+    // Check if it's a base64 connection code
     try {
-      const decoded = JSON.parse(atob(joinCode.trim()));
-      if (decoded.roomId) {
-        setRoomId(decoded.roomId);
+      if (cleanInput.length > 10) {
+        const decoded = JSON.parse(atob(cleanInput));
+        if (decoded.roomId) {
+          targetRoomId = decoded.roomId;
+        }
       }
     } catch {
-      setError("Invalid connection code format");
-      setIsLoading(false);
-      return;
+      // It's a plain room ID like "ABC123"
+      targetRoomId = cleanInput.toUpperCase();
     }
 
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    navigate({
+      to: "/call/$roomId",
+      params: { roomId: targetRoomId },
+      search: {
+        name: name.trim(),
+        initiator: "false",
+        code: targetCode,
+        engine,
+        gestures: callGestureMode ? "true" : "false",
+      },
+    });
   };
 
   const handleStartCall = () => {
-    if (mode === "create" && roomId) {
-      window.location.href = `/call/${roomId}?name=${encodeURIComponent(name)}&initiator=true&code=${encodeURIComponent(generatedCode)}`;
-    } else if (mode === "join" && roomId) {
-      window.location.href = `/call/${roomId}?name=${encodeURIComponent(name)}&initiator=false&code=${encodeURIComponent(joinCode)}`;
-    }
+    if (!roomId) return;
+    navigate({
+      to: "/call/$roomId",
+      params: { roomId },
+      search: {
+        name: name.trim() || "User",
+        initiator: "true",
+        code: generatedCode,
+        engine,
+        gestures: callGestureMode ? "true" : "false",
+      },
+    });
   };
 
-  const copyCode = async () => {
-    await navigator.clipboard.writeText(generatedCode);
+  const copyShareLink = async () => {
+    const url = `${window.location.origin}/call/${roomId}?name=Guest&engine=${engine}&gestures=${callGestureMode ? "true" : "false"}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
       <Navbar />
 
       <main className="flex-1 flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-4xl">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+            {/* Form Section */}
             <div>
-              <div className="text-center lg:text-left mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-                  {mode === "create" ? "Create a Room" : "Join a Room"}
+              <div className="text-left mb-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e8f0fe] text-[#1a73e8] text-xs font-medium mb-3">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Accessible 1:1 Video Calls</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-normal text-[#202124] tracking-tight">
+                  {mode === "create" ? "Create a Call Room" : "Join Existing Room"}
                 </h1>
-                <p className="text-lg text-muted-foreground">
+                <p className="text-sm text-[#5f6368] mt-1">
                   {mode === "create"
-                    ? "Generate a room and share the connection code to start a call"
-                    : "Enter a connection code from another participant to join their call"}
+                    ? "Start a secure video session and share the link with your call partner."
+                    : "Enter a Room ID or invite code to connect with your partner."}
                 </p>
+              </div>
+
+              {/* Mode Switcher Tabs */}
+              <div className="flex bg-[#e8eaed] p-1 rounded-xl mb-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("create");
+                    setShowCode(false);
+                    setError("");
+                  }}
+                  className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
+                    mode === "create"
+                      ? "bg-white text-[#202124] shadow-sm"
+                      : "text-[#5f6368] hover:text-[#202124]"
+                  }`}
+                >
+                  Create Room
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("join");
+                    setShowCode(false);
+                    setError("");
+                  }}
+                  className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${
+                    mode === "join"
+                      ? "bg-white text-[#202124] shadow-sm"
+                      : "text-[#5f6368] hover:text-[#202124]"
+                  }`}
+                >
+                  Join Room
+                </button>
               </div>
 
               <form
                 onSubmit={mode === "create" ? handleCreateRoom : handleJoinRoom}
-                className="space-y-6 bg-card p-6 rounded-xl border border-border"
+                className="space-y-5 bg-white p-6 rounded-2xl border border-[#dadce0] shadow-sm"
               >
+                {/* Name Field */}
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
+                  <label htmlFor="name" className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5">
                     Your Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5f6368]" />
                     <input
                       id="name"
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                      placeholder="Enter your name"
+                      className="w-full pl-9 pr-4 py-2.5 bg-white border border-[#dadce0] rounded-xl text-sm text-[#202124] placeholder:text-[#80868b] focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
+                      placeholder="e.g. Alex"
                       required
-                      disabled={isLoading}
                     />
                   </div>
                 </div>
 
-                {mode === "create" ? (
-                  <>
-                    <div className="pt-4 border-t border-border">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        A connection code will be generated. Share it with the person you want to
-                        call.
+                {/* Call Engine Selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-2">
+                    Video Calling Engine
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEngine("zego")}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        engine === "zego"
+                          ? "border-[#1a73e8] bg-[#e8f0fe]/40 text-[#1a73e8]"
+                          : "border-[#dadce0] bg-white text-[#5f6368] hover:border-[#bdc1c6]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-medium text-xs text-[#202124]">
+                        <Zap className="w-3.5 h-3.5 text-[#1a73e8]" />
+                        <span>ZEGOCLOUD HD</span>
+                      </div>
+                      <p className="text-[11px] text-[#5f6368] mt-1 leading-tight">
+                        Ultra-low latency, screen share, and chat
                       </p>
-                    </div>
-                    {showCode && generatedCode && (
-                      <div className="space-y-4 p-4 bg-primary/5 border border-primary/20 rounded-lg animate-in">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-foreground">Connection Code</span>
-                          <span className="text-xs text-muted-foreground">
-                            Share this with the other participant
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={generatedCode}
-                            readOnly
-                            className="flex-1 px-3 py-2 bg-background border border-input rounded-md text-sm font-mono"
-                          />
-                          <button
-                            type="button"
-                            onClick={copyCode}
-                            className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
-                          >
-                            Copy
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label
-                        htmlFor="joinCode"
-                        className="block text-sm font-medium text-foreground mb-2"
-                      >
-                        Connection Code
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <input
-                          id="joinCode"
-                          type="text"
-                          value={joinCode}
-                          onChange={(e) => setJoinCode(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
-                          placeholder="Paste connection code here..."
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
+                    </button>
 
-                {error && (
-                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {error}
+                    <button
+                      type="button"
+                      onClick={() => setEngine("p2p")}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        engine === "p2p"
+                          ? "border-[#1a73e8] bg-[#e8f0fe]/40 text-[#1a73e8]"
+                          : "border-[#dadce0] bg-white text-[#5f6368] hover:border-[#bdc1c6]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-medium text-xs text-[#202124]">
+                        <Radio className="w-3.5 h-3.5 text-[#34a853]" />
+                        <span>Direct P2P AI</span>
+                      </div>
+                      <p className="text-[11px] text-[#5f6368] mt-1 leading-tight">
+                        Browser-to-browser isolated recognition
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gesture Analysis Mode Selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-2">
+                    AI Gesture Recognition Mode
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCallGestureMode(true)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        callGestureMode
+                          ? "border-[#1a73e8] bg-[#e8f0fe]/50 text-[#1a73e8]"
+                          : "border-[#dadce0] bg-white text-[#5f6368] hover:border-[#bdc1c6]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-medium text-xs text-[#202124]">
+                        <Hand className="w-3.5 h-3.5 text-[#1a73e8]" />
+                        <span>With Gestures (AI On)</span>
+                      </div>
+                      <p className="text-[11px] text-[#5f6368] mt-1 leading-tight">
+                        MediaPipe recognition, dual transcript, & subtitles
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCallGestureMode(false)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        !callGestureMode
+                          ? "border-[#1a73e8] bg-[#e8f0fe]/50 text-[#1a73e8]"
+                          : "border-[#dadce0] bg-white text-[#5f6368] hover:border-[#bdc1c6]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-medium text-xs text-[#202124]">
+                        <Video className="w-3.5 h-3.5 text-[#5f6368]" />
+                        <span>No Gestures (Pure Video)</span>
+                      </div>
+                      <p className="text-[11px] text-[#5f6368] mt-1 leading-tight">
+                        Standard HD video call without AI gesture analysis
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Join Input (when mode === join) */}
+                {mode === "join" && (
+                  <div>
+                    <label
+                      htmlFor="joinInput"
+                      className="block text-xs font-semibold text-[#3c4043] uppercase tracking-wider mb-1.5"
+                    >
+                      Room ID or Connection Code
+                    </label>
+                    <input
+                      id="joinInput"
+                      type="text"
+                      value={joinInput}
+                      onChange={(e) => setJoinInput(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-[#dadce0] rounded-xl text-sm font-mono text-[#202124] placeholder:text-[#80868b] focus:outline-none focus:border-[#1a73e8] focus:ring-2 focus:ring-[#1a73e8]/20"
+                      placeholder="e.g. ABC123"
+                      required
+                    />
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      {mode === "create" ? "Creating..." : "Joining..."}
-                    </>
-                  ) : mode === "create" ? (
-                    "Create Room"
-                  ) : (
-                    "Join Room"
-                  )}
-                </button>
+                {/* Generated Code Display for Room Creation */}
+                {mode === "create" && showCode && roomId && (
+                  <div className="p-4 bg-[#e8f0fe]/50 border border-[#d2e3fc] rounded-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-[#1a73e8] uppercase tracking-wider">
+                        Room Created: {roomId}
+                      </span>
+                      <span className="text-[11px] text-[#5f6368]">Ready to join</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={copyShareLink}
+                        className="flex-1 py-2 px-3 bg-white border border-[#dadce0] hover:bg-[#f1f3f4] text-[#202124] text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-[#34a853]" /> Link Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-[#5f6368]" /> Copy Invite Link
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleStartCall}
+                        className="flex-1 py-2 px-4 bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                      >
+                        Enter Call Room <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {(!showCode || mode === "join") && (
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-[#1a73e8] text-white rounded-xl text-sm font-medium hover:bg-[#1557b0] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {mode === "create" ? "Generate Room" : "Join Video Call"}
+                  </button>
+                )}
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  {mode === "create" ? "Already have a code?" : "Want to create a room instead?"}{" "}
-                  <button
-                    onClick={() => {
-                      setMode(mode === "create" ? "join" : "create");
-                      setError("");
-                      setShowCode(false);
-                      setGeneratedCode("");
-                      setJoinCode("");
-                      setRoomId("");
-                    }}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    {mode === "create" ? "Join instead" : "Create instead"}
-                  </button>
+              <div className="mt-4 p-3 bg-white border border-[#e8eaed] rounded-xl flex items-start gap-2.5 text-xs text-[#5f6368]">
+                <Shield className="w-4 h-4 text-[#34a853] flex-shrink-0 mt-0.5" />
+                <p>
+                  <strong>Private & Secure:</strong> All API credentials are git-ignored and never committed to public repositories.
                 </p>
               </div>
             </div>
 
-            <div className="hidden lg:block">
-              <div className="bg-card border border-border rounded-xl p-8 h-full">
-                <h2 className="text-xl font-semibold text-foreground mb-6">How It Works</h2>
-                <div className="space-y-6">
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                      <Lock className="h-6 w-6" />
+            {/* Right Information Panel */}
+            <div className="space-y-4">
+              <div className="bg-white border border-[#dadce0] rounded-2xl p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-[#202124] mb-4">
+                  Ishara Accessibility Features
+                </h2>
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#e8f0fe] text-[#1a73e8] flex items-center justify-center flex-shrink-0">
+                      <Zap className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-foreground">No Server Required</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Connection codes are exchanged directly between participants. No central
-                        server, no recording.
+                      <h3 className="text-xs font-semibold text-[#202124]">ZEGOCLOUD 1-on-1 Calling</h3>
+                      <p className="text-xs text-[#5f6368] mt-0.5">
+                        Industry-standard HD audio and video with host controls, screen sharing, and in-call text chat.
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                      <Video className="h-6 w-6" />
+
+                  <div className="flex gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#ceead6] text-[#137333] flex items-center justify-center flex-shrink-0">
+                      <Brain className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-foreground">Peer-to-Peer Video</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        WebRTC establishes a direct connection. Your video and audio never touch our
-                        servers.
+                      <h3 className="text-xs font-semibold text-[#202124]">Client-Side Sign Recognition</h3>
+                      <p className="text-xs text-[#5f6368] mt-0.5">
+                        MediaPipe tracks 21 hand landmarks directly in your browser with zero video recording.
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                      <Brain className="h-6 w-6" />
+
+                  <div className="flex gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#feefe3] text-[#b06000] flex items-center justify-center flex-shrink-0">
+                      <MessageSquare className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-foreground">Local AI Recognition</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        MediaPipe hand tracking runs entirely in your browser. 8 signs recognized at
-                        18 FPS.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                      <MessageSquare className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-foreground">Live Dialogue Panel</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Real-time transcript with speaker names, sign vs speech tags, and gloss
-                        translation.
+                      <h3 className="text-xs font-semibold text-[#202124]">Two-Way Dialogue & Captions</h3>
+                      <p className="text-xs text-[#5f6368] mt-0.5">
+                        Sign language translations and speech-to-text live subtitles allow effortless conversation.
                       </p>
                     </div>
                   </div>

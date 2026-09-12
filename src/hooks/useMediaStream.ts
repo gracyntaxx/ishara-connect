@@ -7,10 +7,12 @@ type Options = { video?: boolean; audio?: boolean };
 /**
  * Requests the camera (and optionally the microphone) once and keeps the
  * stream alive for the lifetime of the page that uses it.
+ *
+ * Return shape matches what VideoCall and Practice components expect.
  */
 export function useMediaStream({ video = true, audio = true }: Options = {}) {
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [state, setState] = useState<MediaPermissionState>("idle");
+  const [permissionState, setPermissionState] = useState<MediaPermissionState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const streamRef = useRef<MediaStream | null>(null);
@@ -19,12 +21,12 @@ export function useMediaStream({ video = true, audio = true }: Options = {}) {
     let cancelled = false;
 
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setState("unsupported");
+      setPermissionState("unsupported");
       setError("This browser can't access the camera. Try Chrome or Edge.");
       return;
     }
 
-    setState("requesting");
+    setPermissionState("requesting");
     setError(null);
 
     navigator.mediaDevices
@@ -36,12 +38,12 @@ export function useMediaStream({ video = true, audio = true }: Options = {}) {
         }
         streamRef.current = media;
         setStream(media);
-        setState("granted");
+        setPermissionState("granted");
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         const name = err instanceof DOMException ? err.name : "";
-        setState("denied");
+        setPermissionState("denied");
         setError(
           name === "NotFoundError"
             ? "No camera was found on this device."
@@ -56,15 +58,45 @@ export function useMediaStream({ video = true, audio = true }: Options = {}) {
     };
   }, [video, audio, attempt]);
 
-  const retry = useCallback(() => setAttempt((value) => value + 1), []);
+  const retryStream = useCallback(() => setAttempt((v) => v + 1), []);
+  const requestPermission = retryStream; // alias
 
-  const toggleTrack = useCallback((kind: "audio" | "video", enabled: boolean) => {
-    const tracks =
-      kind === "audio" ? streamRef.current?.getAudioTracks() : streamRef.current?.getVideoTracks();
-    tracks?.forEach((track) => {
-      track.enabled = enabled;
-    });
-  }, []);
+  const toggleAudio = useCallback(
+    (enabled?: boolean) => {
+      const tracks = streamRef.current?.getAudioTracks();
+      tracks?.forEach((track) => {
+        track.enabled = enabled !== undefined ? enabled : !track.enabled;
+      });
+    },
+    [],
+  );
 
-  return { stream, state, error, retry, toggleTrack };
+  const toggleVideo = useCallback(
+    (enabled?: boolean) => {
+      const tracks = streamRef.current?.getVideoTracks();
+      tracks?.forEach((track) => {
+        track.enabled = enabled !== undefined ? enabled : !track.enabled;
+      });
+    },
+    [],
+  );
+
+  const toggleTrack = useCallback(
+    (kind: "audio" | "video", enabled: boolean) => {
+      if (kind === "audio") toggleAudio(enabled);
+      else toggleVideo(enabled);
+    },
+    [toggleAudio, toggleVideo],
+  );
+
+  return {
+    stream,
+    permissionState,
+    error,
+    retryStream,
+    requestPermission,
+    toggleAudio,
+    toggleVideo,
+    toggleTrack,
+  };
 }

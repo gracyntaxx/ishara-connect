@@ -12,7 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccessibilityRouteImport } from './routes/accessibility'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AwarenessRouteImport } from './routes/awareness'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as LearnRouteImport } from './routes/learn'
 import { Route as PracticeRouteImport } from './routes/practice'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RoomRouteImport } from './routes/room'
@@ -34,9 +38,29 @@ const AccessibilityRoute = AccessibilityRouteImport.update({
   path: '/accessibility',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AwarenessRoute = AwarenessRouteImport.update({
+  id: '/awareness',
+  path: '/awareness',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PracticeRoute = PracticeRouteImport.update({
@@ -69,7 +93,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/accessibility': typeof AccessibilityRoute
+  '/auth': typeof AuthRoute
+  '/awareness': typeof AwarenessRoute
+  '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/learn': typeof LearnRoute
   '/practice': typeof PracticeRoute
   '/privacy': typeof PrivacyRoute
   '/room': typeof RoomRoute
@@ -80,7 +108,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/accessibility': typeof AccessibilityRoute
+  '/auth': typeof AuthRoute
+  '/awareness': typeof AwarenessRoute
+  '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/learn': typeof LearnRoute
   '/practice': typeof PracticeRoute
   '/privacy': typeof PrivacyRoute
   '/room': typeof RoomRoute
@@ -92,7 +124,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/accessibility': typeof AccessibilityRoute
+  '/auth': typeof AuthRoute
+  '/awareness': typeof AwarenessRoute
+  '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/learn': typeof LearnRoute
   '/practice': typeof PracticeRoute
   '/privacy': typeof PrivacyRoute
   '/room': typeof RoomRoute
@@ -105,7 +141,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/accessibility'
+    | '/auth'
+    | '/awareness'
+    | '/guide'
     | '/leaderboard'
+    | '/learn'
     | '/practice'
     | '/privacy'
     | '/room'
@@ -116,7 +156,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/accessibility'
+    | '/auth'
+    | '/awareness'
+    | '/guide'
     | '/leaderboard'
+    | '/learn'
     | '/practice'
     | '/privacy'
     | '/room'
@@ -127,7 +171,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/accessibility'
+    | '/auth'
+    | '/awareness'
+    | '/guide'
     | '/leaderboard'
+    | '/learn'
     | '/practice'
     | '/privacy'
     | '/room'
@@ -139,7 +187,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AccessibilityRoute: typeof AccessibilityRoute
+  AuthRoute: typeof AuthRoute
+  AwarenessRoute: typeof AwarenessRoute
+  GuideRoute: typeof GuideRoute
   LeaderboardRoute: typeof LeaderboardRoute
+  LearnRoute: typeof LearnRoute
   PracticeRoute: typeof PracticeRoute
   PrivacyRoute: typeof PrivacyRoute
   RoomRoute: typeof RoomRoute
@@ -170,11 +222,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccessibilityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/awareness': {
+      id: '/awareness'
+      path: '/awareness'
+      fullPath: '/awareness'
+      preLoaderRoute: typeof AwarenessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/leaderboard': {
       id: '/leaderboard'
       path: '/leaderboard'
       fullPath: '/leaderboard'
       preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/practice': {
@@ -219,7 +299,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AccessibilityRoute: AccessibilityRoute,
+  AuthRoute: AuthRoute,
+  AwarenessRoute: AwarenessRoute,
+  GuideRoute: GuideRoute,
   LeaderboardRoute: LeaderboardRoute,
+  LearnRoute: LearnRoute,
   PracticeRoute: PracticeRoute,
   PrivacyRoute: PrivacyRoute,
   RoomRoute: RoomRoute,

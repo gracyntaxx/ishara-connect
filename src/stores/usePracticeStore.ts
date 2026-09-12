@@ -34,6 +34,8 @@ interface PracticeState {
   endSession: () => void;
   setActive: (active: boolean) => void;
   reset: () => void;
+  getAccuracy: (sign: SignLabel) => number;
+  getOverallAccuracy: () => number;
 }
 
 const initialSignStats: Record<SignLabel, PracticeSignStats> = {
@@ -96,6 +98,19 @@ export const usePracticeStore = create<PracticeState>()(
       endSession: () => set({ sessionStartTime: null, isActive: false }),
       setActive: (active) => set({ isActive: active }),
       reset: () => set(initialState),
+
+      getAccuracy: (sign: SignLabel) => {
+        const stat = get().signStats[sign];
+        if (stat.attempts === 0) return 0;
+        return (stat.correct / stat.attempts) * 100;
+      },
+      getOverallAccuracy: () => {
+        const stats = get().signStats;
+        const totalAttempts = Object.values(stats).reduce((sum, s) => sum + s.attempts, 0);
+        const totalCorrect = Object.values(stats).reduce((sum, s) => sum + s.correct, 0);
+        if (totalAttempts === 0) return 0;
+        return (totalCorrect / totalAttempts) * 100;
+      },
     }),
     {
       name: "ishara-practice-store",

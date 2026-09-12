@@ -119,7 +119,7 @@ export function DialoguePanel({ className = "", localUserId }: DialoguePanelProp
       >
         {messages.map((message) => (
           <div key={message.id} className={getMessageClass(message)}>
-            {!message.type === "system" && message.senderId !== localUserId && (
+            {message.type !== "system" && message.senderId !== localUserId && (
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center text-xs font-medium text-secondary">
                 {message.senderName.charAt(0).toUpperCase()}
               </div>

@@ -73,3 +73,50 @@ export function extractFeatures(landmarks: readonly Landmark[]): HandFeatures | 
     indexMiddleGap: distance(tipPoints[1] ?? ORIGIN, tipPoints[2] ?? ORIGIN) / size,
   };
 }
+
+export const HAND_CONNECTIONS: [number, number][] = [
+  [0, 1], [1, 2], [2, 3], [3, 4], // thumb
+  [0, 5], [5, 6], [6, 7], [7, 8], // index
+  [0, 9], [9, 10], [10, 11], [11, 12], // middle
+  [0, 13], [13, 14], [14, 15], [15, 16], // ring
+  [0, 17], [17, 18], [18, 19], [19, 20], // pinky
+  [5, 9], [9, 13], [13, 17], // palm
+];
+
+export function drawLandmarks(
+  ctx: CanvasRenderingContext2D,
+  landmarks: readonly Landmark[],
+  options: { color?: string; connectionColor?: string; radius?: number; lineWidth?: number } = {}
+) {
+  if (!landmarks || landmarks.length === 0) return;
+  const width = ctx.canvas.width;
+  const height = ctx.canvas.height;
+  const {
+    color = "#1a73e8",
+    connectionColor = "rgba(26, 115, 232, 0.5)",
+    radius = 3,
+    lineWidth = 2,
+  } = options;
+
+  // Draw joint connections
+  ctx.strokeStyle = connectionColor;
+  ctx.lineWidth = lineWidth;
+  for (const [start, end] of HAND_CONNECTIONS) {
+    const p1 = landmarks[start];
+    const p2 = landmarks[end];
+    if (p1 && p2) {
+      ctx.beginPath();
+      ctx.moveTo(p1.x * width, p1.y * height);
+      ctx.lineTo(p2.x * width, p2.y * height);
+      ctx.stroke();
+    }
+  }
+
+  // Draw landmark points
+  ctx.fillStyle = color;
+  for (const p of landmarks) {
+    ctx.beginPath();
+    ctx.arc(p.x * width, p.y * height, radius, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
