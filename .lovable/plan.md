@@ -4,7 +4,7 @@ A browser-based platform for 1:1 conversation between sign-language users and sp
 
 ## Two notes before we build
 
-**Logo** — you said you'll upload it. I'll build with a temporary placeholder mark in the header and favicon, then swap in your real logo the moment you attach it. Everything else (colours, layout) is unaffected.
+**Logo** — your uploaded ishara mark is in. Full logo in the top-left header on every page, the icon on its own in tight spaces, and a square version as the browser tab icon.
 
 **How two people connect** — you want a real backend later, so for now connecting works by copy/paste: the person who creates a room copies a short connection code and sends it to their partner (chat, email, whatever), the partner pastes it back. No server needed. The connection logic sits behind one small swappable piece, so when your Express backend exists, room IDs will "just connect" without touching the call, recognition, or dialogue code.
 
