@@ -10,8 +10,7 @@ export function Footer() {
           {/* Brand */}
           <div className="max-w-xs">
             <Link to="/" className="flex items-center gap-2" aria-label="Ishara Home">
-              <img src="/ishara-mark.svg" alt="" className="h-6 w-6" />
-              <span className="text-[16px] font-semibold text-[#202124]">ishara</span>
+              <img src="/ishara-logo.png" alt="Ishara Connect" className="h-8 w-auto object-contain" />
             </Link>
             <p className="mt-3 text-sm text-[#5f6368] leading-relaxed">
               Accessible sign language video calls. Client-side recognition, peer-to-peer

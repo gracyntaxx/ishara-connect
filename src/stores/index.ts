@@ -1,5 +1,5 @@
 export * from "./useCallStore";
-export * from "./useDialogueStore";
+export { useDialogueStore, type DialogueState } from "./useDialogueStore";
 export * from "./useSettingsStore";
 export * from "./usePracticeStore";
 export * from "./useAuthStore";

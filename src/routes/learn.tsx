@@ -35,15 +35,15 @@ const LESSONS: Lesson[] = [
     emoji: "👋",
     shortDesc: "A friendly wave greeting",
     howTo: [
-      "Hold your dominant hand flat, fingers together, palm facing outward",
-      "Touch your fingertips to your forehead (like a salute)",
-      "Move your hand outward and away from your forehead in a smooth arc",
-      "The motion is similar to a casual salute",
+      "Hold your dominant hand flat with all fingers together, palm facing outward",
+      "Touch your fingertips to your forehead like a salute",
+      "Move your hand outward and away from your forehead in a smooth outward arc",
+      "The motion is similar to a casual relaxed salute",
     ],
-    tips: "Keep fingers straight and together. The movement should be relaxed and natural.",
-    handShape: "Open B hand — all fingers extended and held together, thumb relaxed",
-    videoUrl: "https://www.signingsavvy.com/media/mp4-ld/2/2169.mp4",
-    videoCredit: "SigningSavvy",
+    tips: "Keep fingers straight and together. The movement should be relaxed and natural. High spread fingers fanned wide is the key static pose.",
+    handShape: "Open B hand: all fingers extended and held together, thumb relaxed to the side",
+    localVideo: "/videos/hello_vid.mp4",
+    videoCredit: "Ishara demonstration video",
   },
   {
     id: "thankyou",
@@ -51,15 +51,15 @@ const LESSONS: Lesson[] = [
     emoji: "🙏",
     shortDesc: "Express gratitude",
     howTo: [
-      "Hold your dominant hand flat with fingers together (open B hand)",
-      "Touch the fingertips to your chin or lips",
+      "Hold your dominant hand flat with all four fingers straight and held close together",
+      "Touch the tips of your fingers to your chin or lips, palm facing inward",
       "Move your hand forward and slightly downward away from your face",
-      "The movement is like 'blowing a kiss' from chin outward",
+      "The movement flows from your chin outward, like blowing a gentle kiss",
     ],
-    tips: "The hand starts at the chin/lips area and moves outward. Keep the motion smooth.",
-    handShape: "Open B hand — all fingers extended and together, palm facing you initially",
-    videoUrl: "https://www.signingsavvy.com/media/mp4-ld/33/33155.mp4",
-    videoCredit: "SigningSavvy",
+    tips: "Important: fingers must be held together. Keep all four fingers pressed close and straight.",
+    handShape: "Flat B hand: four fingers straight and pressed together, thumb tucked or resting beside index",
+    localVideo: "/videos/thankyou_vid.mp4",
+    videoCredit: "Ishara demonstration video",
   },
   {
     id: "sorry",
@@ -67,15 +67,15 @@ const LESSONS: Lesson[] = [
     emoji: "💙",
     shortDesc: "Apologise sincerely",
     howTo: [
-      "Make a fist with your dominant hand (A hand shape)",
-      "Place the fist on your chest over your heart",
-      "Move the fist in a circular motion on your chest (clockwise from your view)",
-      "Repeat the circular motion 2–3 times",
+      "Make a fist with your dominant hand (A hand shape, all fingers curled tightly)",
+      "Place the fist flat against your chest over your heart area",
+      "Move the fist in a slow circular motion on your chest (clockwise from your view)",
+      "Repeat the circular motion 2 to 3 times while looking sincere",
     ],
-    tips: "The circular motion is key. Keep it on your chest near the heart — this conveys sincerity.",
-    handShape: "A hand — closed fist with thumb resting on the side",
-    videoUrl: "https://www.signingsavvy.com/media/mp4-ld/1/1571.mp4",
-    videoCredit: "SigningSavvy",
+    tips: "The circular chest motion is the entire sign. Keep fingers tightly curled into a fist. Do not extend any fingers.",
+    handShape: "A hand: closed fist with thumb resting against the side, all fingers curled tightly",
+    localVideo: "/videos/sorry_vid.mp4",
+    videoCredit: "Ishara demonstration video",
   },
   {
     id: "bye",
@@ -83,13 +83,13 @@ const LESSONS: Lesson[] = [
     emoji: "✋",
     shortDesc: "Say farewell",
     howTo: [
-      "Hold your dominant hand up with all fingers extended and spread",
-      "Bend and straighten your fingers repeatedly (like a wave)",
-      "Your palm should face outward toward the person you are saying bye to",
-      "Repeat the open-close motion 2–3 times",
+      "Hold your dominant hand up high with all fingers extended and spread open",
+      "Bend and straighten your fingers repeatedly in a wave motion",
+      "Palm faces outward toward the person you are saying goodbye to",
+      "Repeat the open and close wave motion 2 to 3 times",
     ],
-    tips: "Very similar to a normal wave. The key is fingers extended and the open-close movement.",
-    handShape: "5 hand — all five fingers spread and extended open",
+    tips: "Very similar to a normal wave. Extended and spread fingers opening and closing is the key motion.",
+    handShape: "5 hand: all five fingers spread open and extended wide",
     videoUrl: "https://www.signingsavvy.com/media/mp4-ld/2/2196.mp4",
     videoCredit: "SigningSavvy",
   },
@@ -99,13 +99,13 @@ const LESSONS: Lesson[] = [
     emoji: "🤝",
     shortDesc: "Ask for assistance",
     howTo: [
-      "Make a thumbs-up (A hand) with your dominant hand",
-      "Place the thumbs-up fist on top of your non-dominant flat open hand (B hand)",
-      "Lift both hands upward together in one smooth motion",
-      "The non-dominant hand acts as a platform 'lifting' the thumbs-up hand",
+      "Make a thumbs up with your dominant hand: only the thumb extends, all other fingers curl tightly into a fist",
+      "Place your non-dominant hand flat and open (palm facing up) in front of you",
+      "Place your thumbs up fist on top of the open flat hand",
+      "Lift both hands upward together in one smooth upward motion",
     ],
-    tips: "This is a two-handed sign. The lifting motion is essential — it symbolises support.",
-    handShape: "Dominant: A hand (thumbs-up). Non-dominant: B hand (flat, palm up)",
+    tips: "This is a two handed sign. The thumb up hand sits on the flat hand. The lifting motion symbolises one person supporting another.",
+    handShape: "Dominant: A hand with thumb up. Non-dominant: B hand flat with palm facing up",
     videoUrl: "https://www.signingsavvy.com/media/mp4-ld/2/2192.mp4",
     videoCredit: "SigningSavvy",
   },
@@ -119,28 +119,21 @@ type Lesson = {
   howTo: string[];
   tips: string;
   handShape: string;
-  videoUrl: string;
-  videoCredit: string;
+  videoUrl?: string;
+  localVideo?: string;
+  videoId?: string;
+  videoCredit?: string;
 };
 
 type Stage = "pick" | "learn" | "test" | "result";
 
 // ─── Main Page ─────────────────────────────────────────────────────────────
 function LearnPage() {
-  const { user } = useAuthStore();
-  const navigate = useNavigate();
   const [stage, setStage] = useState<Stage>("pick");
   const [selected, setSelected] = useState<Lesson | null>(null);
   const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
   const [testResult, setTestResult] = useState<"correct" | "incorrect" | null>(null);
   const [detectedSign, setDetectedSign] = useState<string | null>(null);
-
-  // Redirect unauthenticated users
-  useEffect(() => {
-    if (!user) {
-      navigate({ to: "/auth" });
-    }
-  }, [user, navigate]);
 
   const handleSelectLesson = (lesson: Lesson) => {
     setSelected(lesson);
@@ -185,9 +178,13 @@ function LearnPage() {
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
       <Navbar />
       <main className="flex-1 py-10 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {stage === "pick" && (
-            <PickStage lessons={LESSONS} masteredIds={masteredIds} onSelect={handleSelectLesson} />
+            <PickStage
+              lessons={LESSONS}
+              masteredIds={masteredIds}
+              onSelect={handleSelectLesson}
+            />
           )}
           {stage === "learn" && selected && (
             <LearnStage lesson={selected} onStartTest={handleStartTest} onBack={handleBack} />
@@ -218,7 +215,7 @@ function LearnPage() {
   );
 }
 
-// ─── Stage 1: Pick a Word ────────────────────────────────────────────────────
+// ─── Stage 1: Pick a Word (Categories) ──────────────────────────────────────
 function PickStage({
   lessons,
   masteredIds,
@@ -230,51 +227,71 @@ function PickStage({
 }) {
   return (
     <div>
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e8f0fe] text-[#1a73e8] text-xs font-medium mb-4">
+      <div className="mb-10 text-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#e8f0fe] text-[#1a73e8] text-xs font-semibold mb-4 border border-[#c5dbff]">
           <BookOpen className="w-3.5 h-3.5" />
-          ASL Learning Module
+          Interactive ASL Library
         </div>
-        <h1 className="text-3xl font-semibold text-[#202124] mb-2">Learn Sign Language</h1>
-        <p className="text-[#5f6368] text-base max-w-md mx-auto">
-          Choose a word to learn. Watch the video, follow the steps, then test yourself with your camera.
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0d1117] tracking-tight mb-3">
+          Learn Sign Language
+        </h1>
+        <p className="text-[#5f6368] text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+          Choose a sign below to open its lesson, watch the video demonstration, and practice with your camera.
         </p>
         {masteredIds.size > 0 && (
-          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#e6f4ea] text-[#34a853] rounded-full text-sm font-medium">
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#e6f4ea] text-[#34a853] rounded-full text-sm font-semibold border border-[#ceead6]">
             <Trophy className="w-4 h-4" />
             {masteredIds.size} of {lessons.length} mastered
           </div>
         )}
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {lessons.map((lesson, idx) => {
           const mastered = masteredIds.has(lesson.id);
+
           return (
             <button
               key={lesson.id}
               onClick={() => onSelect(lesson)}
-              className={`group relative text-left p-5 rounded-2xl border-2 transition-all hover:shadow-md ${
+              className={`group text-left p-6 rounded-2xl border-2 transition-all shadow-sm hover:shadow-md flex flex-col justify-between ${
                 mastered
                   ? "border-[#34a853] bg-[#f0faf3]"
-                  : "border-[#e8eaed] bg-white hover:border-[#1a73e8]"
+                  : "border-[#e8eaed] bg-white hover:border-[#1a73e8] hover:-translate-y-0.5"
               }`}
             >
-              {mastered && (
-                <div className="absolute top-3 right-3">
-                  <CheckCircle2 className="w-5 h-5 text-[#34a853]" />
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-4xl">{lesson.emoji}</span>
+                  {mastered ? (
+                    <div className="bg-[#34a853] text-white p-1 rounded-full">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <span className="text-xs font-bold text-[#1a73e8] bg-[#e8f0fe] px-2.5 py-1 rounded-full">
+                      Lesson {idx + 1}
+                    </span>
+                  )}
                 </div>
-              )}
-              <div className="text-3xl mb-3">{lesson.emoji}</div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs text-[#80868b] font-medium">Lesson {idx + 1}</span>
+
+                <h3 className="text-2xl font-bold text-[#0d1117] group-hover:text-[#1a73e8] transition-colors mb-1.5">
+                  {lesson.sign}
+                </h3>
+                <p className="text-sm text-[#5f6368] leading-relaxed mb-4">
+                  {lesson.shortDesc}
+                </p>
+
+                <div className="p-2.5 rounded-xl bg-[#f8f9fa] border border-[#f1f3f4]">
+                  <p className="text-xs text-[#3c4043] font-medium">
+                    <span className="font-bold text-[#1a73e8]">Pose: </span>
+                    {lesson.handShape}
+                  </p>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-[#202124] group-hover:text-[#1a73e8] transition-colors">
-                {lesson.sign}
-              </h3>
-              <p className="text-sm text-[#5f6368] mt-1">{lesson.shortDesc}</p>
-              <div className="mt-3 flex items-center gap-1 text-xs text-[#1a73e8] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                Start learning <ChevronRight className="w-3.5 h-3.5" />
+
+              <div className="mt-5 pt-3 border-t border-[#f1f3f4] flex items-center justify-between text-sm font-bold text-[#1a73e8]">
+                <span>Start Lesson</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
             </button>
           );
@@ -317,25 +334,26 @@ function LearnStage({
             <Play className="w-4 h-4 text-[#1a73e8]" /> Video Demonstration
           </h3>
           {!videoError ? (
-            <div className="rounded-xl overflow-hidden bg-[#f8f9fa] border border-[#e8eaed]">
+            <div className="rounded-xl overflow-hidden bg-[#000] border border-[#e8eaed]">
               <video
-                src={lesson.videoUrl}
+                key={lesson.id}
+                src={lesson.localVideo || lesson.videoUrl}
                 controls
                 autoPlay
                 loop
                 muted
                 playsInline
                 onError={() => setVideoError(true)}
-                className="w-full max-h-52 object-contain"
+                className="w-full max-h-64 object-contain mx-auto"
               />
-              <p className="text-center text-[10px] text-[#80868b] py-1.5">
-                Video credit: {lesson.videoCredit}
+              <p className="text-center text-[11px] text-[#80868b] py-1.5 bg-[#f8f9fa] border-t border-[#f1f3f4]">
+                Video: {lesson.videoCredit || "Demonstration"}
               </p>
             </div>
           ) : (
             <div className="rounded-xl bg-[#f8f9fa] border border-[#e8eaed] p-8 text-center">
               <Hand className="w-10 h-10 text-[#dadce0] mx-auto mb-2" />
-              <p className="text-sm text-[#5f6368]">Video unavailable — follow the steps below</p>
+              <p className="text-sm text-[#5f6368]">Video unavailable: follow the steps below</p>
             </div>
           )}
         </div>
@@ -377,7 +395,7 @@ function LearnStage({
         Test What I've Learned
         <ArrowRight className="w-5 h-5" />
       </button>
-      <p className="text-center text-xs text-[#80868b] mt-2">Your camera will open — show the gesture and we'll detect it</p>
+      <p className="text-center text-xs text-[#80868b] mt-2">Your camera will open: show the gesture and we will detect it</p>
     </div>
   );
 }
@@ -472,7 +490,7 @@ function TestStage({
           )}
           {testResult === "incorrect" && detectedSign && (
             <div className="ml-auto text-xs text-[#ea4335] font-medium">
-              Detected: {detectedSign} — try again
+              Detected: {detectedSign}, try again
             </div>
           )}
         </div>

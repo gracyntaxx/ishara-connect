@@ -135,8 +135,8 @@ export function drawLandmarks(
 ) {
   drawMultiHandLandmarks(ctx, [landmarks], {
     showCoordinates: options.showCoordinates ?? true,
-    radius: options.radius,
-    lineWidth: options.lineWidth,
+    ...(options.radius !== undefined ? { radius: options.radius } : {}),
+    ...(options.lineWidth !== undefined ? { lineWidth: options.lineWidth } : {}),
   });
 }
 
@@ -158,7 +158,7 @@ export function drawMultiHandLandmarks(
   multiLandmarks.forEach((landmarks, handIdx) => {
     if (!landmarks || landmarks.length < LANDMARK_COUNT) return;
 
-    const palette = HAND_PALETTES[handIdx % HAND_PALETTES.length] ?? HAND_PALETTES[0];
+    const palette = (HAND_PALETTES[handIdx % HAND_PALETTES.length] ?? HAND_PALETTES[0])!;
 
     // 1. Draw glowing joint connections (bones)
     ctx.strokeStyle = palette.connectionColor;

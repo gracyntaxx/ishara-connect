@@ -28,12 +28,10 @@ export function Navbar() {
         aria-label="Main navigation"
       >
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5" aria-label="Ishara Home">
-          <img src="/ishara-mark.svg" alt="" className="h-7 w-7" />
-          <span className="text-[20px] font-semibold text-[#0f172a] tracking-[-0.01em]">
-            ishara
-          </span>
+        <Link to="/" className="flex items-center gap-2" aria-label="Ishara Home">
+          <img src="/ishara-logo.png" alt="Ishara Connect" className="h-10 w-auto object-contain" />
         </Link>
+
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1">

@@ -1,348 +1,314 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { Navbar, Footer } from "../components";
-import { APP_TAGLINE, SUPPORTED_SIGNS } from "../lib/constants";
-import { ArrowRight, Hand, MessageCircle, Shield, Zap, BookOpen, Trophy } from "lucide-react";
+import { ArrowRight, Hand, MessageCircle, Shield, Zap, BookOpen, Video, Users, Sparkles } from "lucide-react";
+import { useAuthStore } from "../stores";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/")(({
   component: Index,
-});
+}));
 
 function Index() {
+  const { user } = useAuthStore();
+
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <Navbar />
 
       <main className="flex-1">
-        {/* ─── Hero ─────────────────────────────────────────── */}
-        <section className="pt-20 pb-16 lg:pt-28 lg:pb-24">
-          <div className="mx-auto max-w-3xl px-6 text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#dadce0] px-4 py-1.5 text-sm text-[#5f6368]">
-              <span className="h-2 w-2 rounded-full bg-[#0d9488]" />
-              Free &amp; open source
+
+        {/* ═══════════════════════════════════════════════
+            HERO SECTION
+        ═══════════════════════════════════════════════ */}
+        <section className="relative pt-20 pb-24 lg:pt-32 lg:pb-32 overflow-hidden">
+
+          {/* Background doodle blobs */}
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            {/* Top-left blob */}
+            <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-gradient-to-br from-[#e8f0fe] to-[#c5dbff] opacity-60 blur-3xl" />
+            {/* Top-right blob */}
+            <div className="absolute -top-12 -right-20 w-80 h-80 rounded-full bg-gradient-to-bl from-[#e6f4ea] to-[#b7efc5] opacity-50 blur-3xl" />
+            {/* Bottom-center blob */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-48 rounded-full bg-gradient-to-t from-[#f0f4ff] to-transparent opacity-70 blur-2xl" />
+
+            {/* Decorative hand doodles — floating icons */}
+            <svg className="absolute top-16 right-[8%] w-14 h-14 text-[#1a73e8] opacity-10 rotate-12" viewBox="0 0 24 24" fill="currentColor"><path d="M18 11V8a2 2 0 0 0-4 0v3H10V5a2 2 0 0 0-4 0v12l-2-2.59a2 2 0 0 0-2.83 2.83L4 21h16v-7a3 3 0 0 0-2-2.83Z"/></svg>
+            <svg className="absolute bottom-24 left-[6%] w-10 h-10 text-[#34a853] opacity-15 -rotate-6" viewBox="0 0 24 24" fill="currentColor"><path d="M18 11V8a2 2 0 0 0-4 0v3H10V5a2 2 0 0 0-4 0v12l-2-2.59a2 2 0 0 0-2.83 2.83L4 21h16v-7a3 3 0 0 0-2-2.83Z"/></svg>
+            {/* Dotted circle accent */}
+            <svg className="absolute top-32 left-[15%] w-20 h-20 text-[#1a73e8] opacity-8" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6"/>
+            </svg>
+            <svg className="absolute bottom-32 right-[12%] w-16 h-16 text-[#34a853] opacity-8" viewBox="0 0 80 80" fill="none">
+              <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="2" strokeDasharray="4 8"/>
+            </svg>
+          </div>
+
+          <div className="relative mx-auto max-w-4xl px-6 text-center">
+            {/* Eyebrow pill */}
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[#e8f0fe] border border-[#c5dbff] px-4 py-1.5 text-sm font-semibold text-[#1a73e8]">
+              <Sparkles className="w-3.5 h-3.5" />
+              AI Powered Sign Language Communication
             </div>
 
-            <h1 className="text-[44px] sm:text-[56px] leading-[1.1] font-normal text-[#202124] tracking-[-0.02em]">
-              Sign language meets
+            <h1 className="text-[48px] sm:text-[64px] lg:text-[76px] leading-[1.05] font-extrabold text-[#0d1117] tracking-tight">
+              Bridge the gap
               <br />
-              <span className="text-[#3b82f6]">real-time conversation</span>
+              <span className="bg-gradient-to-r from-[#1a73e8] to-[#0ea5e9] bg-clip-text text-transparent">
+                between every voice
+              </span>
             </h1>
 
-            <p className="mt-6 text-lg text-[#5f6368] max-w-xl mx-auto leading-relaxed">
-              Ishara Connect uses AI to recognise hand gestures in real time and convert them to text —
-              making video calls accessible for Deaf and hearing users alike.
+            <p className="mt-7 text-xl sm:text-2xl text-[#3c4043] max-w-2xl mx-auto leading-relaxed font-medium">
+              Ishara Connect turns your hand gestures into text, in real time, during a live video call.
+              No specialised devices. No interpreters. Just your hands and a camera.
             </p>
 
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                to="/room"
-                className="inline-flex items-center gap-2 rounded-full bg-[#1a73e8] px-8 py-3 text-[15px] font-medium text-white hover:bg-[#1557b0] transition-colors shadow-sm"
+                to={user ? "/room" : "/auth"}
+                className="inline-flex items-center gap-2.5 rounded-full bg-[#1a73e8] px-9 py-4 text-[16px] font-bold text-white hover:bg-[#1557b0] transition-all shadow-lg shadow-[#1a73e8]/30 hover:shadow-xl hover:shadow-[#1a73e8]/40 hover:-translate-y-0.5"
               >
-                Start a Call
-                <ArrowRight className="h-4 w-4" />
+                <Video className="h-5 w-5" />
+                Start a Video Call
+                <ArrowRight className="h-5 w-5" />
               </Link>
               <Link
-                to="/learn"
-                className="inline-flex items-center gap-2 rounded-full border border-[#dadce0] px-8 py-3 text-[15px] font-medium text-[#1a73e8] hover:bg-[#f0f4ff] transition-colors"
+                to={user ? "/learn" : "/auth"}
+                className="inline-flex items-center gap-2.5 rounded-full border-2 border-[#1a73e8] px-9 py-4 text-[16px] font-bold text-[#1a73e8] hover:bg-[#f0f4ff] transition-all"
               >
-                <BookOpen className="h-4 w-4" />
+                <BookOpen className="h-5 w-5" />
                 Learn Sign Language
               </Link>
             </div>
 
-            <div className="mt-8 flex items-center justify-center gap-6 text-sm text-[#80868b]">
-              <span>Free to use</span>
-              <span className="h-1 w-1 rounded-full bg-[#dadce0]" />
-              <span>Works in your browser</span>
-              <span className="h-1 w-1 rounded-full bg-[#dadce0]" />
-              <span>No download needed</span>
-            </div>
+            <p className="mt-5 text-sm text-[#80868b]">
+              {user ? "Welcome back! Jump straight in." : "Sign up free to get started, it takes 10 seconds."}
+            </p>
           </div>
         </section>
 
-        {/* ─── Product preview ──────────────────────────────── */}
-        <section className="pb-20 lg:pb-28">
+        {/* ═══════════════════════════════════════════════
+            WHAT IT DOES (visual demo mockup)
+        ═══════════════════════════════════════════════ */}
+        <section className="py-20 bg-[#f8f9fa]">
           <div className="mx-auto max-w-5xl px-6">
-            <div className="rounded-2xl border border-[#e8eaed] bg-[#f8f9fa] overflow-hidden">
-              <div className="grid md:grid-cols-2 gap-0">
-                {/* Video call mockup */}
-                <div className="p-8 flex flex-col justify-center">
-                  <div className="rounded-xl bg-[#202124] aspect-video flex items-center justify-center relative overflow-hidden">
-                    <div className="text-center">
-                      <Hand className="mx-auto h-10 w-10 text-[#3b82f6] mb-3" />
-                      <p className="text-sm text-[#9aa0a6]">Live sign recognition</p>
-                    </div>
-                    <div className="absolute bottom-3 left-3 bg-[#0d9488] text-white text-xs px-2 py-1 rounded-md font-medium">
-                      Hello — 94%
-                    </div>
-                  </div>
-                </div>
-                {/* Dialogue mockup */}
-                <div className="p-8 bg-white border-l border-[#e8eaed] flex flex-col justify-center">
-                  <p className="text-xs font-medium text-[#80868b] uppercase tracking-wider mb-4">
-                    Live Dialogue
-                  </p>
-                  <div className="space-y-4 text-sm">
-                    <div>
-                      <span className="font-medium text-[#3b82f6]">You</span>
-                      <p className="text-[#202124] mt-0.5">Hello, how are you?</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-[#0d9488]">Alex</span>
-                      <p className="text-[#202124] mt-0.5">I'm good, thank you!</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-[#3b82f6]">You</span>
-                      <p className="text-[#202124] mt-0.5">
-                        <span className="inline-flex items-center gap-1 text-[#0d9488] bg-[#f0fdfa] px-1.5 py-0.5 rounded text-xs font-medium">
-                          ✋ Thank You
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="text-center mb-14">
+              <h2 className="text-4xl sm:text-5xl font-extrabold text-[#0d1117] tracking-tight">
+                How it works
+              </h2>
+              <p className="mt-4 text-lg text-[#5f6368] max-w-xl mx-auto">
+                Three steps from sign to message. No extra hardware needed.
+              </p>
             </div>
-          </div>
-        </section>
 
-        {/* ─── Problem → Solution ───────────────────────────── */}
-        <section className="py-16 lg:py-24 bg-[#f8f9fa]">
-          <div className="mx-auto max-w-5xl px-6">
-            <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-normal text-[#202124] tracking-[-0.01em]">
-                  Communication should be
-                  <br />
-                  <span className="text-[#3b82f6]">accessible to everyone</span>
-                </h2>
-                <p className="mt-4 text-[#5f6368] leading-relaxed">
-                  Millions of Deaf and hard-of-hearing individuals face daily barriers in
-                  conversations with hearing people. Existing tools are expensive, require
-                  specialised hardware, or send private video to remote servers.
-                </p>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-[#202124] mb-3">Ishara changes that</h3>
-                <ul className="space-y-3 text-[#5f6368]">
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
-                      ✓
-                    </span>
-                    <span>Recognition runs entirely in your browser — zero cloud processing</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
-                      ✓
-                    </span>
-                    <span>No downloads, no installation — works in any modern browser</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
-                      ✓
-                    </span>
-                    <span>Video stays between you and your partner via peer-to-peer</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 h-5 w-5 rounded-full bg-[#e8f5e9] text-[#10b981] flex items-center justify-center text-xs">
-                      ✓
-                    </span>
-                    <span>Practice mode helps you learn and improve at your own pace</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── How it works (step line) ─────────────────────── */}
-        <section className="py-16 lg:py-24">
-          <div className="mx-auto max-w-5xl px-6">
-            <h2 className="text-2xl sm:text-3xl font-normal text-[#202124] text-center mb-16 tracking-[-0.01em]">
-              Get started in four steps
-            </h2>
-
-            <div className="grid md:grid-cols-4 gap-8 relative">
-              {/* Connecting line */}
-              <div
-                className="hidden md:block absolute top-6 left-[12.5%] right-[12.5%] h-[2px] bg-[#e8eaed]"
-                aria-hidden="true"
-              />
-
+            <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
-                  n: "1",
-                  title: "Create a room",
-                  desc: "Generate a room code and share it with your conversation partner.",
+                  step: "01",
+                  emoji: "✋",
+                  title: "Sign naturally",
+                  desc: "Show ASL gestures to your camera during the video call. Ishara watches your hands in real time.",
+                  color: "#1a73e8",
+                  bg: "#e8f0fe",
                 },
                 {
-                  n: "2",
-                  title: "Allow camera",
-                  desc: "Grant camera and microphone access. All processing stays on your device.",
+                  step: "02",
+                  emoji: "🤖",
+                  title: "AI reads it",
+                  desc: "Our on-device AI model detects your hand landmarks and classifies the sign instantly with confidence scoring.",
+                  color: "#0ea5e9",
+                  bg: "#e0f2fe",
                 },
                 {
-                  n: "3",
-                  title: "Start signing",
-                  desc: "Sign naturally — recognised signs appear as text in real time.",
+                  step: "03",
+                  emoji: "💬",
+                  title: "Text appears",
+                  desc: "The recognised word appears as a text subtitle on both your screen and your partner's screen simultaneously.",
+                  color: "#34a853",
+                  bg: "#e6f4ea",
                 },
-                {
-                  n: "4",
-                  title: "Review & learn",
-                  desc: "Check the dialogue transcript or head to practice mode to improve.",
-                },
-              ].map((step) => (
-                <div key={step.n} className="text-center relative">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-[#3b82f6] text-white flex items-center justify-center text-lg font-medium relative z-10">
-                    {step.n}
+              ].map((item) => (
+                <div key={item.step} className="relative bg-white rounded-2xl border-2 border-[#e8eaed] p-8 hover:border-[#1a73e8] hover:shadow-lg transition-all group">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5 font-black text-lg"
+                    style={{ backgroundColor: item.bg, color: item.color }}
+                  >
+                    {item.emoji}
                   </div>
-                  <h3 className="mt-4 text-[15px] font-medium text-[#202124]">{step.title}</h3>
-                  <p className="mt-2 text-sm text-[#5f6368] leading-relaxed">{step.desc}</p>
+                  <div className="absolute top-5 right-6 text-[10px] font-black text-[#dadce0] tracking-widest group-hover:text-[#1a73e8] transition-colors">
+                    {item.step}
+                  </div>
+                  <h3 className="text-xl font-bold text-[#0d1117] mb-2">{item.title}</h3>
+                  <p className="text-[#5f6368] leading-relaxed">{item.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ─── Features ─────────────────────────────────────── */}
-        <section className="py-16 lg:py-24 bg-[#f8f9fa]">
+        {/* ═══════════════════════════════════════════════
+            WHO IT IS FOR (problem statement)
+        ═══════════════════════════════════════════════ */}
+        <section className="py-20 bg-white relative overflow-hidden">
+          {/* Doodle lines */}
+          <div className="pointer-events-none absolute right-0 top-0 w-1/2 h-full" aria-hidden="true">
+            <svg className="absolute right-8 top-12 w-40 h-40 text-[#1a73e8] opacity-5" viewBox="0 0 200 200" fill="none">
+              <circle cx="100" cy="100" r="80" stroke="currentColor" strokeWidth="3" strokeDasharray="12 8"/>
+              <circle cx="100" cy="100" r="50" stroke="currentColor" strokeWidth="2" strokeDasharray="6 10"/>
+            </svg>
+          </div>
+
           <div className="mx-auto max-w-5xl px-6">
-            <h2 className="text-2xl sm:text-3xl font-normal text-[#202124] text-center mb-12 tracking-[-0.01em]">
-              Built for accessibility
-            </h2>
+            <div className="grid md:grid-cols-2 gap-16 items-center">
+              <div>
+                <span className="inline-block text-xs font-black uppercase tracking-[0.15em] text-[#1a73e8] mb-4">The Problem</span>
+                <h2 className="text-4xl sm:text-5xl font-extrabold text-[#0d1117] leading-tight tracking-tight">
+                  Millions of conversations
+                  <span className="text-[#ea4335]"> lost every day</span>
+                </h2>
+                <p className="mt-5 text-lg text-[#5f6368] leading-relaxed">
+                  Over 70 million Deaf people worldwide face daily barriers when communicating with hearing individuals. Video calls made the world smaller but left the Deaf community behind.
+                </p>
+                <p className="mt-3 text-lg text-[#5f6368] leading-relaxed">
+                  Interpreters are expensive, hard to book, and not always available. Ishara gives everyone a way to be understood, instantly.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  { icon: "🔒", title: "100% private", desc: "All AI runs in your browser. Your video never leaves your device." },
+                  { icon: "⚡", title: "Real-time speed", desc: "Gesture to text in under 200ms. No delays, no buffering." },
+                  { icon: "🌍", title: "No barriers", desc: "Works on any modern browser. No app download, no account needed to try." },
+                  { icon: "📚", title: "Learn as you go", desc: "Built-in learning module teaches you signs with video demos and live testing." },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-4 p-5 rounded-2xl bg-[#f8f9fa] border border-[#e8eaed] hover:border-[#1a73e8] transition-colors group">
+                    <div className="text-2xl flex-shrink-0">{item.icon}</div>
+                    <div>
+                      <h3 className="font-bold text-[#0d1117] group-hover:text-[#1a73e8] transition-colors">{item.title}</h3>
+                      <p className="text-sm text-[#5f6368] mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════
+            FEATURES GRID
+        ═══════════════════════════════════════════════ */}
+        <section className="py-20 bg-[#0d1117] text-white relative overflow-hidden">
+          {/* Dark bg doodles */}
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div className="absolute top-0 left-0 w-80 h-80 rounded-full bg-[#1a73e8] opacity-5 blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[#34a853] opacity-5 blur-3xl" />
+          </div>
+
+          <div className="relative mx-auto max-w-5xl px-6">
+            <div className="text-center mb-14">
+              <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
+                Built for real conversations
+              </h2>
+              <p className="mt-4 text-lg text-[#9aa0a6]">
+                Every feature designed around accessibility and ease of use.
+              </p>
+            </div>
 
             <div className="grid md:grid-cols-3 gap-6">
               {[
                 {
                   icon: Zap,
-                  title: "Real-time recognition",
-                  desc: "MediaPipe tracks 21 hand landmarks at 18 FPS. A rule-based classifier identifies 8 signs with temporal smoothing.",
-                  color: "#3b82f6",
+                  title: "AI Gesture Recognition",
+                  desc: "MediaPipe tracks 21 landmarks per hand at 18 FPS. Detects Hello, Thank You, Sorry, Bye, Help and more.",
+                  accent: "#1a73e8",
                 },
                 {
                   icon: MessageCircle,
-                  title: "Live dialogue panel",
-                  desc: "Conversation flows like a transcript with speaker names, sign vs speech labels, and confidence scores.",
-                  color: "#0d9488",
+                  title: "Live Transcript Panel",
+                  desc: "Signed gestures and spoken words both appear as text for both participants in real time.",
+                  accent: "#0ea5e9",
                 },
                 {
                   icon: Shield,
-                  title: "Privacy first",
-                  desc: "No video leaves your browser. No account needed. WebRTC connects you directly to your partner.",
-                  color: "#10b981",
+                  title: "Zero Data Leakage",
+                  desc: "Recognition runs on your device. No video is uploaded anywhere. Encrypted peer to peer connection.",
+                  accent: "#34a853",
+                },
+                {
+                  icon: BookOpen,
+                  title: "Learn with Videos",
+                  desc: "Step by step ASL lessons with video demonstrations and live gesture testing. Interactive progress.",
+                  accent: "#f9ab00",
+                },
+                {
+                  icon: Users,
+                  title: "Multi user Rooms",
+                  desc: "Create a room code, share it, and both of you join the same call. Works across devices and networks.",
+                  accent: "#ea4335",
+                },
+                {
+                  icon: Hand,
+                  title: "Dual Hand Tracking",
+                  desc: "Tracks both hands simultaneously using MediaPipe. Shows skeleton overlay in the Live AI panel.",
+                  accent: "#9c27b0",
                 },
               ].map((f) => (
                 <div
                   key={f.title}
-                  className="bg-white rounded-xl border border-[#e8eaed] p-6 hover:shadow-md transition-shadow"
+                  className="bg-[#1a1f2e] rounded-2xl border border-[#2d3748] p-6 hover:border-opacity-80 transition-all hover:-translate-y-1"
+                  style={{ borderColor: `${f.accent}30` }}
                 >
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
-                    style={{ backgroundColor: `${f.color}15`, color: f.color }}
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                    style={{ backgroundColor: `${f.accent}20`, color: f.accent }}
                   >
-                    <f.icon className="h-5 w-5" />
+                    <f.icon className="w-6 h-6" />
                   </div>
-                  <h3 className="text-[15px] font-medium text-[#202124] mb-2">{f.title}</h3>
-                  <p className="text-sm text-[#5f6368] leading-relaxed">{f.desc}</p>
+                  <h3 className="text-lg font-bold text-white mb-2">{f.title}</h3>
+                  <p className="text-sm text-[#9aa0a6] leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ─── Supported signs ──────────────────────────────── */}
-        <section className="py-16 lg:py-24">
-          <div className="mx-auto max-w-4xl px-6 text-center">
-            <h2 className="text-2xl sm:text-3xl font-normal text-[#202124] mb-4 tracking-[-0.01em]">
-              8 signs, recognised instantly
-            </h2>
-            <p className="text-[#5f6368] mb-8">
-              The local classifier supports these signs at launch. More can be added by editing one
-              file.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {SUPPORTED_SIGNS.map((sign) => (
-                <span
-                  key={sign}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#dadce0] bg-white px-4 py-2 text-sm font-medium text-[#202124] hover:bg-[#f1f3f4] transition-colors"
-                >
-                  <span className="h-2 w-2 rounded-full bg-[#3b82f6]" />
-                  {sign}
-                </span>
-              ))}
-            </div>
+        {/* ═══════════════════════════════════════════════
+            FINAL CTA
+        ═══════════════════════════════════════════════ */}
+        <section className="py-24 bg-gradient-to-br from-[#1a73e8] to-[#0ea5e9] relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-white opacity-5 blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-white opacity-5 blur-3xl" />
+            <svg className="absolute right-16 top-8 w-24 h-24 text-white opacity-10 rotate-12" viewBox="0 0 24 24" fill="currentColor"><path d="M18 11V8a2 2 0 0 0-4 0v3H10V5a2 2 0 0 0-4 0v12l-2-2.59a2 2 0 0 0-2.83 2.83L4 21h16v-7a3 3 0 0 0-2-2.83Z"/></svg>
+            <svg className="absolute left-12 bottom-8 w-16 h-16 text-white opacity-10 -rotate-6" viewBox="0 0 24 24" fill="currentColor"><path d="M18 11V8a2 2 0 0 0-4 0v3H10V5a2 2 0 0 0-4 0v12l-2-2.59a2 2 0 0 0-2.83 2.83L4 21h16v-7a3 3 0 0 0-2-2.83Z"/></svg>
           </div>
-        </section>
 
-        {/* ─── More links ───────────────────────────────────── */}
-        <section className="py-16 lg:py-20 bg-[#f8f9fa]">
-          <div className="mx-auto max-w-5xl px-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Link
-                to="/guide"
-                className="group flex items-center gap-4 rounded-xl border border-[#e8eaed] bg-white p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[#eff6ff] text-[#3b82f6] flex items-center justify-center flex-shrink-0">
-                  <BookOpen className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-[15px] font-medium text-[#202124] group-hover:text-[#3b82f6] transition-colors">
-                    How to use Ishara
-                  </h3>
-                  <p className="text-sm text-[#5f6368] mt-0.5">
-                    Step-by-step guide, tips, and supported sign reference.
-                  </p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-[#80868b] ml-auto flex-shrink-0 group-hover:text-[#3b82f6] transition-colors" />
-              </Link>
-
-              <Link
-                to="/leaderboard"
-                className="group flex items-center gap-4 rounded-xl border border-[#e8eaed] bg-white p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[#f0fdf4] text-[#10b981] flex items-center justify-center flex-shrink-0">
-                  <Trophy className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-[15px] font-medium text-[#202124] group-hover:text-[#10b981] transition-colors">
-                    Leaderboard
-                  </h3>
-                  <p className="text-sm text-[#5f6368] mt-0.5">
-                    See how your practice compares with others.
-                  </p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-[#80868b] ml-auto flex-shrink-0 group-hover:text-[#10b981] transition-colors" />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* ─── Final CTA ────────────────────────────────────── */}
-        <section className="py-20 lg:py-28">
-          <div className="mx-auto max-w-3xl px-6 text-center">
-            <h2 className="text-2xl sm:text-3xl font-normal text-[#202124] mb-4 tracking-[-0.01em]">
-              Ready to start?
+          <div className="relative mx-auto max-w-3xl px-6 text-center text-white">
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-5">
+              Ready to connect?
             </h2>
-            <p className="text-[#5f6368] mb-8 max-w-md mx-auto">
-              Create a room, share the code, and start communicating in seconds. No installation, no
-              account required.
+            <p className="text-xl text-blue-100 mb-10 max-w-xl mx-auto">
+              Create a room, share the code with your friend, and start signing. It takes less than a minute to get started.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                to="/room"
-                className="inline-flex items-center gap-2 rounded-full bg-[#3b82f6] px-8 py-3 text-[15px] font-medium text-white hover:bg-[#2563eb] transition-colors shadow-sm"
+                to={user ? "/room" : "/auth"}
+                className="inline-flex items-center gap-2.5 rounded-full bg-white px-9 py-4 text-[16px] font-bold text-[#1a73e8] hover:bg-blue-50 transition-all shadow-xl"
               >
-                Create a Room
-                <ArrowRight className="h-4 w-4" />
+                <Video className="h-5 w-5" />
+                Start a Video Call
               </Link>
               <Link
-                to="/practice"
-                className="inline-flex items-center gap-2 rounded-full border border-[#dadce0] px-8 py-3 text-[15px] font-medium text-[#3b82f6] hover:bg-[#f8faff] transition-colors"
+                to={user ? "/learn" : "/auth"}
+                className="inline-flex items-center gap-2.5 rounded-full border-2 border-white px-9 py-4 text-[16px] font-bold text-white hover:bg-white/10 transition-all"
               >
-                Practice First
+                <BookOpen className="h-5 w-5" />
+                Learn First
               </Link>
             </div>
           </div>
         </section>
+
       </main>
 
       <Footer />

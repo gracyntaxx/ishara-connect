@@ -63,6 +63,7 @@ function Settings() {
   } = useSettingsStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showAnonKey, setShowAnonKey] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
 
   useEffect(() => {
@@ -567,7 +568,7 @@ function Settings() {
                     <div className="relative">
                       <input
                         id="supabaseKey"
-                        type="password"
+                        type={showAnonKey ? "text" : "password"}
                         value={import.meta.env.VITE_SUPABASE_ANON_KEY || ""}
                         readOnly
                         className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent pr-10"
@@ -590,7 +591,8 @@ function Settings() {
                     <button
                       onClick={async () => {
                         try {
-                          const { data, error } = await supabase
+                          if (!supabase) return;
+                          const { error } = await supabase
                             .from("users")
                             .select("count")
                             .limit(1);
@@ -599,7 +601,7 @@ function Settings() {
                           alert("Failed to connect");
                         }
                       }}
-                      className="px-4 py-2 border border-input bg-background text-foreground rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+                      className="px-4 py-2 border border-input bg-background text-foreground rounded-lg text-sm font-medium hover:bg-accent transition-colors flex items-center"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Test Connection

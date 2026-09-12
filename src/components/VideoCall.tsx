@@ -348,7 +348,7 @@ export function VideoCall({
     <div className="flex h-screen flex-col bg-background">
       <header className="flex items-center justify-between border-b border-border bg-background px-4 py-3">
         <div className="flex items-center gap-3">
-          <img src="/ishara-mark.svg" alt="" className="h-8 w-8" />
+          <img src="/ishara-logo.png" alt="Ishara Connect" className="h-8 w-auto object-contain" />
           <div>
             <h1 className="text-lg font-bold text-foreground">Ishara Connect</h1>
             <p className="text-xs text-muted-foreground">Room: {roomId}</p>

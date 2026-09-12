@@ -109,7 +109,7 @@ function AuthPage() {
           {/* Card */}
           <div className="bg-white rounded-2xl border border-[#e8eaed] p-8 shadow-sm">
             <div className="text-center mb-8">
-              <img src="/ishara-mark.svg" alt="" className="h-10 w-10 mx-auto mb-4" />
+              <img src="/ishara-logo.png" alt="Ishara Connect" className="h-16 w-auto mx-auto mb-4 object-contain" />
               <h1 className="text-2xl font-normal text-[#202124]">
                 {mode === "login" ? "Sign in to Ishara" : "Create your account"}
               </h1>
