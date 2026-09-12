@@ -29,32 +29,33 @@ function Index() {
             </h1>
 
             <p className="mt-6 text-lg text-[#5f6368] max-w-xl mx-auto leading-relaxed">
-              {APP_TAGLINE} Ishara recognises hand signs in your browser and converts them to text
-              instantly — no servers, no accounts, completely private.
+              Ishara Connect uses AI to recognise hand gestures in real time and convert them to text —
+              making video calls accessible for Deaf and hearing users alike.
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 to="/room"
-                className="inline-flex items-center gap-2 rounded-full bg-[#3b82f6] px-8 py-3 text-[15px] font-medium text-white hover:bg-[#2563eb] transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 rounded-full bg-[#1a73e8] px-8 py-3 text-[15px] font-medium text-white hover:bg-[#1557b0] transition-colors shadow-sm"
               >
                 Start a Call
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
-                to="/practice"
-                className="inline-flex items-center gap-2 rounded-full border border-[#dadce0] px-8 py-3 text-[15px] font-medium text-[#3b82f6] hover:bg-[#f8faff] transition-colors"
+                to="/learn"
+                className="inline-flex items-center gap-2 rounded-full border border-[#dadce0] px-8 py-3 text-[15px] font-medium text-[#1a73e8] hover:bg-[#f0f4ff] transition-colors"
               >
-                Try Practice Mode
+                <BookOpen className="h-4 w-4" />
+                Learn Sign Language
               </Link>
             </div>
 
             <div className="mt-8 flex items-center justify-center gap-6 text-sm text-[#80868b]">
-              <span>No signup required</span>
+              <span>Free to use</span>
               <span className="h-1 w-1 rounded-full bg-[#dadce0]" />
-              <span>Peer-to-peer</span>
+              <span>Works in your browser</span>
               <span className="h-1 w-1 rounded-full bg-[#dadce0]" />
-              <span>Works offline</span>
+              <span>No download needed</span>
             </div>
           </div>
         </section>

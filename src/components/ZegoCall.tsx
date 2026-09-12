@@ -41,9 +41,8 @@ export function ZegoCall({
 }: ZegoCallProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const zegoInstanceRef = useRef<any>(null);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const callOverlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const broadcastChannelRef = useRef<any>(null);
   const navigate = useNavigate();
 
@@ -310,7 +309,7 @@ export function ZegoCall({
     confidenceThreshold: 0.48,
   });
 
-  // 1. Draw dual-hand skeleton on monitor canvas (Live Gesture AI box)
+  // Draw dual-hand skeleton on monitor canvas (Live Gesture AI box)
   useEffect(() => {
     if (!canvasRef.current || !gestureMode || !showSkeleton) {
       if (canvasRef.current) {
@@ -330,35 +329,6 @@ export function ZegoCall({
         showCoordinates: true,
         radius: 3.5,
         lineWidth: 2.2,
-      });
-    }
-  }, [multiLandmarks, gestureMode, showSkeleton]);
-
-  // 2. Draw dual-hand skeleton & coordinates overlay directly in Video Call Window
-  useEffect(() => {
-    if (!callOverlayCanvasRef.current || !gestureMode || !showSkeleton) {
-      if (callOverlayCanvasRef.current) {
-        const ctx = callOverlayCanvasRef.current.getContext("2d");
-        ctx?.clearRect(
-          0,
-          0,
-          callOverlayCanvasRef.current.width,
-          callOverlayCanvasRef.current.height,
-        );
-      }
-      return;
-    }
-
-    const canvas = callOverlayCanvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (multiLandmarks && multiLandmarks.length > 0) {
-      drawMultiHandLandmarks(ctx, multiLandmarks, {
-        showCoordinates: true,
-        radius: 4,
-        lineWidth: 2.6,
       });
     }
   }, [multiLandmarks, gestureMode, showSkeleton]);
@@ -707,16 +677,6 @@ export function ZegoCall({
           className={`relative flex-1 h-full overflow-hidden transition-all ${gestureMode ? "w-full lg:w-[65%]" : "w-full"}`}
         >
           <div ref={containerRef} className="w-full h-full" style={{ minHeight: "100%" }} />
-
-          {/* AR Dual-Hand Skeleton & Coordinates Canvas Overlay */}
-          {gestureMode && showSkeleton && (
-            <canvas
-              ref={callOverlayCanvasRef}
-              width={640}
-              height={480}
-              className="absolute inset-0 w-full h-full pointer-events-none z-10 -scale-x-100 object-cover"
-            />
-          )}
 
           {/* Real-Time Dual-Hand Telemetry HUD in the Video Window */}
           {gestureMode && (
