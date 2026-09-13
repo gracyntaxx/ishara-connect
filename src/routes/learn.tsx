@@ -473,8 +473,8 @@ function TestStage({
     if (multiLandmarks && multiLandmarks.length > 0) {
       drawMultiHandLandmarks(ctx, multiLandmarks, {
         showCoordinates: true,
-        radius: 4,
-        lineWidth: 2.5,
+        radius: 2.2,
+        lineWidth: 1.3,
       });
     }
   }, [multiLandmarks]);
@@ -500,7 +500,9 @@ function TestStage({
     landmarks,
     multiLandmarks,
     enabled: isRunning && testResult !== "correct",
-    confidenceThreshold: 0.44,
+    confidenceThreshold: 0.50,
+    smoothingWindow: 8,
+    minVotes: 5,
     targetSign: lesson.sign,
   });
 
@@ -508,7 +510,7 @@ function TestStage({
   const isTargetMatch = Boolean(
     prediction &&
       prediction.toLowerCase().trim() === lesson.sign.toLowerCase().trim() &&
-      confidence >= 0.46
+      confidence >= 0.50
   );
 
   // Hold-to-verify timer
@@ -518,22 +520,23 @@ function TestStage({
     let timer: any;
     if (isTargetMatch) {
       timer = setInterval(() => {
-        setHoldProgress((prev) => {
-          const next = prev + 25;
-          if (next >= 100) {
-            clearInterval(timer);
-            onSuccess(lesson.sign);
-            return 100;
-          }
-          return next;
-        });
+        setHoldProgress((prev) => Math.min(100, prev + 25));
       }, 120);
     } else {
-      setHoldProgress(0);
+      setHoldProgress((prev) => (prev > 0 ? 0 : 0));
     }
 
-    return () => clearInterval(timer);
-  }, [isTargetMatch, testResult, lesson.sign, onSuccess]);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isTargetMatch, testResult]);
+
+  // Once 100% held, notify success cleanly outside state updater
+  useEffect(() => {
+    if (holdProgress >= 100 && testResult !== "correct") {
+      onSuccess(lesson.sign);
+    }
+  }, [holdProgress, testResult, lesson.sign, onSuccess]);
 
   // Direct AI Analysis
   const handleAnalyzeWithAi = async () => {

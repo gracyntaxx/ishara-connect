@@ -87,8 +87,15 @@ Sign characteristics:
 - Help: Thumbs-up fist (A-hand with thumb extended) resting on top of a flat palm base, lifting together.
 - Yes: Closed fist (S-hand) nodding.
 - No: Index and middle fingers extended straight together, tapping thumb.
-- Good: Flat hand moving from chin forward into palm.
+- Good: Flat hand moving from chin forward into palm, or thumbs up / V shape.
 - Please: Open flat hand rubbing circular motion over chest.
+- I Love You: Thumb, index finger, and pinky extended; middle and ring curled tightly (classic ASL ILY sign).
+- Understand: Pointing index finger straight up from a fist (1-finger shape).
+- Peace: Index and middle fingers extended in a wide V shape, others curled.
+- Stop: Open flat hand held upright facing outward toward camera, fingers together.
+- Friend: Index and middle fingers crossed, or two index fingers hooking together.
+- How Are You: Both open hands or open flat hand held forward facing the camera.
+- Welcome: Flat open hand sweeping inward toward chest.
 
 ${targetNote}
 ${handDesc}

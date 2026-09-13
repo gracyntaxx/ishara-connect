@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { SignLabel } from "../lib/constants";
+import { SUPPORTED_SIGNS, type SignLabel } from "../lib/constants";
 
 export interface PracticeAttempt {
   id: string;
@@ -38,22 +38,19 @@ interface PracticeState {
   getOverallAccuracy: () => number;
 }
 
-const initialSignStats: Record<SignLabel, PracticeSignStats> = {
-  Hello: { sign: "Hello", attempts: 0, correct: 0, bestConfidence: 0, lastPracticed: null },
-  "Thank You": {
-    sign: "Thank You",
-    attempts: 0,
-    correct: 0,
-    bestConfidence: 0,
-    lastPracticed: null,
+const initialSignStats = SUPPORTED_SIGNS.reduce(
+  (acc, sign) => {
+    acc[sign] = {
+      sign,
+      attempts: 0,
+      correct: 0,
+      bestConfidence: 0,
+      lastPracticed: null,
+    };
+    return acc;
   },
-  Yes: { sign: "Yes", attempts: 0, correct: 0, bestConfidence: 0, lastPracticed: null },
-  No: { sign: "No", attempts: 0, correct: 0, bestConfidence: 0, lastPracticed: null },
-  Help: { sign: "Help", attempts: 0, correct: 0, bestConfidence: 0, lastPracticed: null },
-  Good: { sign: "Good", attempts: 0, correct: 0, bestConfidence: 0, lastPracticed: null },
-  Sorry: { sign: "Sorry", attempts: 0, correct: 0, bestConfidence: 0, lastPracticed: null },
-  Please: { sign: "Please", attempts: 0, correct: 0, bestConfidence: 0, lastPracticed: null },
-};
+  {} as Record<SignLabel, PracticeSignStats>,
+);
 
 const initialState = {
   targetSign: null,

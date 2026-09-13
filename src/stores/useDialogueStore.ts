@@ -14,7 +14,7 @@ export interface DialogueMessage {
   gloss?: string;
 }
 
-interface DialogueState {
+export interface DialogueState {
   messages: DialogueMessage[];
   showGloss: boolean;
   autoScroll: boolean;

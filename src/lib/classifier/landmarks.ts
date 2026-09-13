@@ -102,21 +102,21 @@ export const HAND_CONNECTIONS: [number, number][] = [
 
 export const HAND_PALETTES = [
   {
-    name: "Hand 1",
-    jointColor: "#00f0ff", // Vibrant Cyan
-    glowColor: "rgba(0, 240, 255, 0.5)",
-    connectionColor: "rgba(14, 165, 233, 0.85)",
-    badgeBg: "rgba(8, 20, 35, 0.88)",
-    badgeBorder: "rgba(0, 240, 255, 0.6)",
-    textColor: "#e0f2fe",
+    name: "H1",
+    jointColor: "#22d3ee", // Slim Cyan
+    glowColor: "rgba(34, 211, 238, 0.35)",
+    connectionColor: "rgba(6, 182, 212, 0.75)",
+    badgeBg: "rgba(15, 23, 42, 0.72)",
+    badgeBorder: "rgba(34, 211, 238, 0.45)",
+    textColor: "#cffafe",
   },
   {
-    name: "Hand 2",
-    jointColor: "#c084fc", // Neon Purple
-    glowColor: "rgba(192, 132, 252, 0.5)",
-    connectionColor: "rgba(168, 85, 247, 0.85)",
-    badgeBg: "rgba(30, 10, 45, 0.88)",
-    badgeBorder: "rgba(192, 132, 252, 0.6)",
+    name: "H2",
+    jointColor: "#c084fc", // Slim Purple
+    glowColor: "rgba(192, 132, 252, 0.35)",
+    connectionColor: "rgba(168, 85, 247, 0.75)",
+    badgeBg: "rgba(24, 15, 40, 0.72)",
+    badgeBorder: "rgba(192, 132, 252, 0.45)",
     textColor: "#f3e8ff",
   },
 ];
@@ -153,14 +153,15 @@ export function drawMultiHandLandmarks(
   if (!multiLandmarks || multiLandmarks.length === 0) return;
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
-  const { radius = 3.5, lineWidth = 2.2, showCoordinates = true } = options;
+  // Narrow, refined markers instead of clunky oversized lines
+  const { radius = 2.2, lineWidth = 1.3, showCoordinates = true } = options;
 
   multiLandmarks.forEach((landmarks, handIdx) => {
     if (!landmarks || landmarks.length < LANDMARK_COUNT) return;
 
     const palette = (HAND_PALETTES[handIdx % HAND_PALETTES.length] ?? HAND_PALETTES[0])!;
 
-    // 1. Draw glowing joint connections (bones)
+    // 1. Draw slim, high-precision joint connections (bones)
     ctx.strokeStyle = palette.connectionColor;
     ctx.lineWidth = lineWidth;
     ctx.lineCap = "round";
@@ -177,90 +178,110 @@ export function drawMultiHandLandmarks(
       }
     }
 
-    // 2. Draw 21 landmark nodes with outer glowing halos
+    // 2. Draw refined micro landmark nodes with subtle aura
     for (let i = 0; i < landmarks.length; i++) {
       const p = landmarks[i];
       if (!p) continue;
       const px = p.x * width;
       const py = p.y * height;
 
-      // Outer glow circle
+      // Subtle outer glow halo
       ctx.beginPath();
-      ctx.arc(px, py, radius * 1.8, 0, 2 * Math.PI);
+      ctx.arc(px, py, radius * 1.4, 0, 2 * Math.PI);
       ctx.fillStyle = palette.glowColor;
       ctx.fill();
 
-      // Inner solid node
+      // Pinpoint inner joint node
       ctx.beginPath();
       ctx.arc(px, py, radius, 0, 2 * Math.PI);
       ctx.fillStyle = palette.jointColor;
       ctx.fill();
     }
 
-    // 3. Render Real-Time Coordinates Badges (Wrist + Index Tip)
+    // 3. Render Narrowed-Down Precision Coordinate Markers (Wrist & Index Tip)
     if (showCoordinates) {
       const wrist = landmarks[0];
       const indexTip = landmarks[8];
 
-      // Wrist coordinate telemetry pill
+      // Wrist: micro-crosshair and narrow telemetry tag
       if (wrist) {
-        const wx = Math.min(Math.max(wrist.x * width, 10), width - 110);
-        const wy = Math.min(Math.max(wrist.y * height + 16, 20), height - 12);
+        const wx = wrist.x * width;
+        const wy = wrist.y * height;
 
-        const xCoord = wrist.x.toFixed(2);
-        const yCoord = wrist.y.toFixed(2);
-        const zCoord = (wrist.z ?? 0).toFixed(2);
-        const text = `${palette.name} [X:${xCoord} Y:${yCoord} Z:${zCoord}]`;
+        // Narrow micro-crosshair reticle
+        ctx.strokeStyle = palette.jointColor;
+        ctx.lineWidth = 0.75;
+        const tick = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(wx - tick, wy);
+        ctx.lineTo(wx + tick, wy);
+        ctx.moveTo(wx, wy - tick);
+        ctx.lineTo(wx, wy + tick);
+        ctx.stroke();
 
-        ctx.font = "bold 9px monospace";
-        const metrics = ctx.measureText(text);
-        const pillWidth = metrics.width + 12;
-        const pillHeight = 16;
+        // Ultra-narrow coordinate badge
+        const badgeX = Math.min(Math.max(wx - 24, 4), width - 56);
+        const badgeY = Math.min(Math.max(wy + 8, 12), height - 12);
+        const coordText = `${palette.name} (${Math.round(wrist.x * 100)}, ${Math.round(wrist.y * 100)})`;
+
+        ctx.font = "500 8px -apple-system, BlinkMacSystemFont, monospace";
+        const metrics = ctx.measureText(coordText);
+        const pillW = metrics.width + 6;
+        const pillH = 11;
 
         ctx.fillStyle = palette.badgeBg;
         ctx.strokeStyle = palette.badgeBorder;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.6;
 
-        // Rounded pill
         ctx.beginPath();
         if (typeof ctx.roundRect === "function") {
-          ctx.roundRect(wx - 4, wy - 11, pillWidth, pillHeight, 4);
+          ctx.roundRect(badgeX, badgeY - 8, pillW, pillH, 3);
         } else {
-          ctx.rect(wx - 4, wy - 11, pillWidth, pillHeight);
+          ctx.rect(badgeX, badgeY - 8, pillW, pillH);
         }
         ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = palette.textColor;
-        ctx.fillText(text, wx + 2, wy + 1);
+        ctx.fillText(coordText, badgeX + 3, badgeY);
       }
 
-      // Index tip coordinate pill
+      // Index tip: pinpoint reticle and compact mini tag
       if (indexTip) {
-        const ix = Math.min(Math.max(indexTip.x * width, 10), width - 80);
-        const iy = Math.min(Math.max(indexTip.y * height - 12, 14), height - 10);
-        const tipText = `Tip: (${indexTip.x.toFixed(2)}, ${indexTip.y.toFixed(2)})`;
+        const ix = indexTip.x * width;
+        const iy = indexTip.y * height;
 
-        ctx.font = "8px monospace";
+        // Precision tip ring
+        ctx.strokeStyle = palette.jointColor;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.arc(ix, iy, radius * 1.5, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        const tipTagX = Math.min(Math.max(ix - 16, 4), width - 42);
+        const tipTagY = Math.min(Math.max(iy - 6, 10), height - 8);
+        const tipText = `${Math.round(indexTip.x * 100)}, ${Math.round(indexTip.y * 100)}`;
+
+        ctx.font = "500 7.5px monospace";
         const tipMetrics = ctx.measureText(tipText);
-        const pillWidth = tipMetrics.width + 8;
-        const pillHeight = 13;
+        const tipW = tipMetrics.width + 5;
+        const tipH = 10;
 
         ctx.fillStyle = palette.badgeBg;
         ctx.strokeStyle = palette.badgeBorder;
-        ctx.lineWidth = 0.8;
+        ctx.lineWidth = 0.5;
 
         ctx.beginPath();
         if (typeof ctx.roundRect === "function") {
-          ctx.roundRect(ix - 3, iy - 9, pillWidth, pillHeight, 3);
+          ctx.roundRect(tipTagX, tipTagY - 7, tipW, tipH, 2.5);
         } else {
-          ctx.rect(ix - 3, iy - 9, pillWidth, pillHeight);
+          ctx.rect(tipTagX, tipTagY - 7, tipW, tipH);
         }
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = palette.jointColor;
-        ctx.fillText(tipText, ix + 1, iy);
+        ctx.fillStyle = palette.textColor;
+        ctx.fillText(tipText, tipTagX + 2.5, tipTagY);
       }
     }
   });

@@ -476,9 +476,9 @@ export function VideoCall({
             )}
 
             {!landmarks && mediaStream && localVideoEnabled && (
-              <div className="absolute bottom-4 left-4 right-4 flex justify-center">
-                <div className="bg-background/90 backdrop-blur px-4 py-2 rounded-full text-sm text-muted-foreground flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-warning" />
+              <div className="absolute bottom-20 left-4 right-4 flex justify-center pointer-events-none">
+                <div className="bg-background/90 backdrop-blur px-3.5 py-1.5 rounded-full text-xs text-muted-foreground flex items-center gap-2">
+                  <AlertCircle className="h-3.5 w-3.5 text-warning" />
                   <span>No hand detected - position your hand in view</span>
                 </div>
               </div>

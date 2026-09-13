@@ -44,26 +44,25 @@ type Rule = { label: SignLabel; score: (f: HandFeatures) => number };
 const RULES: Rule[] = [
   {
     // Hello: open 5-hand fanned out wide (wave / high-five).
-    // All 5 fingers extended AND fingers must be SPREAD WIDE APART.
-    // Thumb must be abducted outward from index.
+    // All 5 fingers extended and spread apart.
     label: "Hello",
     score: (f) => {
       const fourExt = (f.extension[1] + f.extension[2] + f.extension[3] + f.extension[4]) / 4;
       const thumbExt = f.extension[0];
+      const allExt = (fourExt * 4 + thumbExt) / 5;
 
-      // If fingers are held close together, it is a flat hand (Thank You territory)
-      if (f.spread < 0.38) {
-        return 0.15 * fourExt;
-      }
+      // Noticeable spread is essential for wave/hello vs flat hand
+      const spreadScore = clamp01((f.spread - 0.22) / 0.35);
+      const thumbOut = clamp01((f.thumbIndexGap - 0.18) / 0.32);
 
-      const wideSpread = clamp01((f.spread - 0.35) / 0.35);
-      const wideThumb = clamp01((f.thumbIndexGap - 0.22) / 0.35);
+      // Penalize if fingers are pressed tight together (Thank You territory)
+      const notTight = clamp01((f.spread - 0.12) / 0.20);
 
       return clamp01(
-        0.35 * fourExt +
-        0.15 * thumbExt +
-        0.30 * wideSpread +
-        0.20 * wideThumb
+        0.40 * allExt +
+        0.30 * spreadScore +
+        0.15 * thumbOut +
+        0.15 * notTight
       );
     },
   },
@@ -73,63 +72,82 @@ const RULES: Rule[] = [
     label: "Thank You",
     score: (f) => {
       const fourExt = (f.extension[1] + f.extension[2] + f.extension[3] + f.extension[4]) / 4;
-      // Low spread: fingers are held parallel / close together
-      const closeFingers = clamp01(1 - (f.spread / 0.42));
-      const closeIndexMiddle = clamp01(1 - (f.indexMiddleGap / 0.25));
-      // Thumb is not sticking out wide like a starfish
-      const thumbNotWide = clamp01(1 - ((f.thumbIndexGap - 0.15) / 0.45));
+      // Low spread: fingers are held parallel and close together
+      const closeFingers = clamp01(1 - (f.spread - 0.05) / 0.35);
+      const closeIndexMiddle = clamp01(1 - f.indexMiddleGap / 0.22);
+      // Thumb is relaxed or tucked near the palm, not stretched wide like a starfish
+      const thumbNotStretched = clamp01(1 - (f.thumbIndexGap - 0.15) / 0.40);
 
-      // If fingers are widely spread, it is Hello, not Thank You
-      if (f.spread > 0.52) {
-        return 0.2 * fourExt;
+      // If fingers are fanned wide, it is Hello or Bye, not Thank You
+      if (f.spread > 0.48) {
+        return 0.15 * fourExt;
       }
 
       return clamp01(
-        0.45 * fourExt +
-        0.30 * closeFingers +
+        0.50 * fourExt +
+        0.25 * closeFingers +
         0.15 * closeIndexMiddle +
-        0.10 * thumbNotWide
+        0.10 * thumbNotStretched
       );
     },
   },
   {
-    // Yes: S-hand — closed fist, everything curled tightly.
+    // Yes: S-hand — closed fist, thumb tucked tightly across the fingers.
     label: "Yes",
     score: (f) => {
       const allCurled = fingers(f, [false, false, false, false, false]);
-      const thumbOver = 1 - clamp01(f.thumbIndexGap / 0.3);
-      return clamp01(0.7 * allCurled + 0.3 * thumbOver);
+      const thumbOver = clamp01(1 - f.thumbIndexGap / 0.22);
+      return clamp01(0.70 * allCurled + 0.30 * thumbOver);
     },
   },
   {
-    // No: index + middle out, close together — like scissors or a two-finger point.
+    // No: index + middle extended together, close together (scissors / snapping down).
     label: "No",
-    score: (f) =>
-      0.6 * fingers(f, [false, true, true, false, false]) +
-      0.4 * near(f.indexMiddleGap, 0.12, 0.25),
+    score: (f) => {
+      const twoExt = (f.extension[1] + f.extension[2]) / 2;
+      const othersCurled = ((1 - f.extension[3]) + (1 - f.extension[4])) / 2;
+      const closeTogether = clamp01(1 - f.indexMiddleGap / 0.20);
+      return clamp01(0.45 * twoExt + 0.35 * othersCurled + 0.20 * closeTogether);
+    },
   },
   {
-    // Help: thumbs-up — only thumb extended, all other fingers tightly curled.
+    // Good: universal thumbs-up! Only thumb extended, all other fingers curled tightly into fist.
+    label: "Good",
+    score: (f) => {
+      const thumbUp = f.extension[0];
+      const fourCurled =
+        ((1 - f.extension[1]) + (1 - f.extension[2]) + (1 - f.extension[3]) + (1 - f.extension[4])) / 4;
+      const thumbIsolated = clamp01((f.thumbIndexGap - 0.22) / 0.35);
+      return clamp01(0.50 * thumbUp + 0.35 * fourCurled + 0.15 * thumbIsolated);
+    },
+  },
+  {
+    // Peace: index and middle extended in a clear, wide V shape. Ring and pinky curled.
+    label: "Peace",
+    score: (f) => {
+      const twoUp = (f.extension[1] + f.extension[2]) / 2;
+      const othersCurled = ((1 - f.extension[3]) + (1 - f.extension[4])) / 2;
+      const wideV = clamp01((f.indexMiddleGap - 0.25) / 0.35);
+      const thumbFolded = 1 - clamp01(f.extension[0] / 0.6);
+      return clamp01(0.40 * twoUp + 0.30 * othersCurled + 0.20 * wideV + 0.10 * thumbFolded);
+    },
+  },
+  {
+    // Help: thumbs-up gesture (or compound dual hand).
     label: "Help",
     score: (f) => {
       const thumbUp = f.extension[0];
-      return clamp01(0.6 * thumbUp + 0.4 * (1 - (f.extension[1] + f.extension[2]) / 2));
+      const othersCurled = ((1 - f.extension[1]) + (1 - f.extension[2]) + (1 - f.extension[3])) / 3;
+      return clamp01(0.55 * thumbUp + 0.45 * othersCurled);
     },
   },
   {
-    // Good: index + middle up in a wide V shape, ring + pinky curled.
-    label: "Good",
-    score: (f) =>
-      0.5 * fingers(f, [false, true, true, false, false]) +
-      0.5 * near(f.indexMiddleGap, 0.6, 0.35),
-  },
-  {
-    // Sorry: A-hand (fist) on chest — all fingers curled, thumb resting on side.
+    // Sorry: A-hand (fist) with thumb resting alongside index finger.
     label: "Sorry",
     score: (f) => {
       const allCurled = fingers(f, [false, false, false, false, false]);
-      const thumbSide = clamp01(f.thumbIndexGap / 0.25);
-      return clamp01(0.75 * allCurled + 0.25 * thumbSide);
+      const thumbSide = clamp01((f.thumbIndexGap - 0.10) / 0.25);
+      return clamp01(0.70 * allCurled + 0.30 * thumbSide);
     },
   },
   {
@@ -138,17 +156,78 @@ const RULES: Rule[] = [
     label: "Bye",
     score: (f) => {
       const allExt = fingers(f, [true, true, true, true, true]);
-      const wideSpread = clamp01((f.spread - 0.32) / 0.35);
-      return clamp01(0.6 * allExt + 0.4 * wideSpread);
+      const wideSpread = clamp01((f.spread - 0.25) / 0.35);
+      return clamp01(0.55 * allExt + 0.45 * wideSpread);
     },
   },
   {
     // Please: OK / ring shape — thumb + index tip touching (small gap),
     // middle + ring + pinky extended.
     label: "Please",
-    score: (f) =>
-      0.55 * fingers(f, [true, true, true, true, true]) +
-      0.45 * near(f.thumbIndexGap, 0.08, 0.22),
+    score: (f) => {
+      const threeExt = (f.extension[2] + f.extension[3] + f.extension[4]) / 3;
+      const ringTouching = clamp01(1 - f.thumbIndexGap / 0.15);
+      return clamp01(0.55 * threeExt + 0.45 * ringTouching);
+    },
+  },
+  {
+    // I Love You (ILY): thumb, index, and pinky extended; middle and ring curled.
+    label: "I Love You",
+    score: (f) => {
+      const thumbIndexPinky = (f.extension[0] + f.extension[1] + f.extension[4]) / 3;
+      const middleRingCurled = ((1 - f.extension[2]) + (1 - f.extension[3])) / 2;
+      return clamp01(0.55 * thumbIndexPinky + 0.45 * middleRingCurled);
+    },
+  },
+  {
+    // Understand: pointing index finger straight up (1-finger), all others curled.
+    label: "Understand",
+    score: (f) => {
+      const indexUp = f.extension[1];
+      const othersCurled =
+        ((1 - f.extension[0]) + (1 - f.extension[2]) + (1 - f.extension[3]) + (1 - f.extension[4])) /
+        4;
+      return clamp01(0.60 * indexUp + 0.40 * othersCurled);
+    },
+  },
+  {
+    // Stop: flat open hand held upright with fingers close together (barrier).
+    label: "Stop",
+    score: (f) => {
+      const fourExt = (f.extension[1] + f.extension[2] + f.extension[3] + f.extension[4]) / 4;
+      const thumbExt = f.extension[0];
+      const closeSpread = clamp01(1 - f.spread / 0.40);
+      return clamp01(0.50 * fourExt + 0.25 * thumbExt + 0.25 * closeSpread);
+    },
+  },
+  {
+    // Friend: index and middle fingers crossed close together.
+    label: "Friend",
+    score: (f) => {
+      const indexMiddleUp = (f.extension[1] + f.extension[2]) / 2;
+      const crossed = clamp01(1 - Math.abs(f.indexMiddleGap - 0.05) / 0.15);
+      const othersCurled = ((1 - f.extension[3]) + (1 - f.extension[4])) / 2;
+      return clamp01(0.40 * indexMiddleUp + 0.40 * crossed + 0.20 * othersCurled);
+    },
+  },
+  {
+    // How Are You: open flat hand presenting forward toward camera.
+    label: "How Are You",
+    score: (f) => {
+      const allExt = fingers(f, [true, true, true, true, true]);
+      const modSpread = clamp01(1 - Math.abs(f.spread - 0.32) / 0.25);
+      return clamp01(0.60 * allExt + 0.40 * modSpread);
+    },
+  },
+  {
+    // Welcome: flat hand sweeping inward toward body, palm tilted.
+    label: "Welcome",
+    score: (f) => {
+      const fourExt = (f.extension[1] + f.extension[2] + f.extension[3] + f.extension[4]) / 4;
+      const relaxedThumb = 1 - clamp01((f.thumbIndexGap - 0.20) / 0.40);
+      const lowSpread = clamp01(1 - f.spread / 0.40);
+      return clamp01(0.50 * fourExt + 0.25 * relaxedThumb + 0.25 * lowSpread);
+    },
   },
 ];
 
@@ -215,6 +294,23 @@ export function classifyMultiLandmarks(
     if (bothFlatLowSpread) {
       return { label: "Thank You", confidence: 0.93 };
     }
+
+    // Both hands held forward open: "How Are You"
+    const bothHeldForward =
+      feat1.extension.every((e) => e > 0.45) &&
+      feat2.extension.every((e) => e > 0.45) &&
+      Math.abs(feat1.spread - 0.35) < 0.2 &&
+      Math.abs(feat2.spread - 0.35) < 0.2;
+    if (bothHeldForward) {
+      return { label: "How Are You", confidence: 0.92 };
+    }
+
+    // Both hands in I Love You: double affection
+    const h1ILY = feat1.extension[0] > 0.6 && feat1.extension[1] > 0.6 && feat1.extension[4] > 0.6 && feat1.extension[2] < 0.35 && feat1.extension[3] < 0.35;
+    const h2ILY = feat2.extension[0] > 0.6 && feat2.extension[1] > 0.6 && feat2.extension[4] > 0.6 && feat2.extension[2] < 0.35 && feat2.extension[3] < 0.35;
+    if (h1ILY || h2ILY) {
+      return { label: "I Love You", confidence: 0.96 };
+    }
   }
 
   // Whichever hand has highest confidence
@@ -225,12 +321,34 @@ export function classifyMultiLandmarks(
 }
 
 export function classifyFeatures(features: HandFeatures): Prediction | null {
-  let best: Prediction | null = null;
+  const candidates: Array<{ label: SignLabel; confidence: number }> = [];
+
   for (const rule of ACTIVE_RULES) {
     const confidence = clamp01(rule.score(features));
-    if (!best || confidence > best.confidence) {
-      best = { label: rule.label, confidence };
+    if (confidence > 0.35) {
+      candidates.push({ label: rule.label, confidence });
     }
   }
+
+  if (candidates.length === 0) return null;
+
+  // Sort descending by confidence
+  candidates.sort((a, b) => b.confidence - a.confidence);
+
+  const best = candidates[0]!;
+
+  // Disambiguation check: if top two are neck-and-neck, dampen confidence slightly
+  // so the user must hold the gesture more cleanly
+  if (candidates.length > 1) {
+    const runnerUp = candidates[1]!;
+    const margin = best.confidence - runnerUp.confidence;
+    if (margin < 0.07 && best.confidence < 0.85) {
+      return {
+        label: best.label,
+        confidence: Math.max(0, best.confidence - 0.10),
+      };
+    }
+  }
+
   return best;
 }

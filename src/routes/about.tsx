@@ -85,7 +85,7 @@ function About() {
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-6">Supported Signs</h2>
               <p className="text-muted-foreground mb-6">
-                The current version recognizes these 8 fundamental signs. More signs coming soon!
+                The current version recognizes these conversational signs in real time. More signs coming soon!
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {SUPPORTED_SIGNS.map((sign) => (

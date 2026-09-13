@@ -107,8 +107,7 @@ function GuidePage() {
               Supported signs reference
             </h2>
             <p className="text-center text-[#5f6368] mb-10">
-              These 8 signs are recognised by the local classifier. Hold the hand pose steady for
-              1–2 seconds.
+              These conversational signs are recognized in real time by the gesture classifier. Hold the hand pose steady for 1 to 2 seconds.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-4">

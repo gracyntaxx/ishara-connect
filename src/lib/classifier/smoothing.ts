@@ -15,6 +15,7 @@ export class TemporalSmoother {
   private readonly minVotes: number;
   private frames: Array<{ label: SignLabel | null; confidence: number }> = [];
   private lastStable: SmoothedResult = { label: null, confidence: 0 };
+  private staleCount = 0;
 
   constructor(window = SMOOTHING_WINDOW, minVotes = SMOOTHING_MIN_VOTES) {
     this.window = window;
@@ -35,18 +36,36 @@ export class TemporalSmoother {
     }
 
     let winner: SmoothedResult | null = null;
-    for (const [label, entry] of votes) {
-      if (entry.count < this.minVotes) continue;
-      const confidence = entry.total / entry.count;
-      if (!winner || confidence > winner.confidence) winner = { label, confidence };
+    for (const [vLabel, entry] of votes) {
+      if (entry.count >= this.minVotes) {
+        const avgConf = entry.total / entry.count;
+        if (!winner || avgConf > winner.confidence) {
+          winner = { label: vLabel, confidence: avgConf };
+        }
+      }
     }
 
-    if (winner) this.lastStable = winner;
-    return winner ?? this.lastStable;
+    if (winner) {
+      this.lastStable = winner;
+      this.staleCount = 0;
+      return winner;
+    }
+
+    // If no gesture reaches majority consensus inside the window,
+    // allow a brief 2-frame grace period for transition, then decay to empty
+    this.staleCount += 1;
+    if (this.staleCount <= 2 && this.lastStable.label !== null) {
+      return { label: this.lastStable.label, confidence: this.lastStable.confidence * 0.85 };
+    }
+
+    // Gesture stopped or was replaced by uncertain frames
+    this.lastStable = { label: null, confidence: 0 };
+    return { label: null, confidence: 0 };
   }
 
   reset(): void {
     this.frames = [];
     this.lastStable = { label: null, confidence: 0 };
+    this.staleCount = 0;
   }
 }
